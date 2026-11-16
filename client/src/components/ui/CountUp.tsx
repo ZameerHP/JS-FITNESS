@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { gsap } from '../../lib/gsap';
+import { loadGsap } from '../../lib/gsapBridge';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useTier } from '../../lib/perfTier';
 
@@ -23,32 +23,36 @@ export const CountUp: React.FC<CountUpProps> = React.memo(
       const el = ref.current;
       if (!el) return;
 
-      if (reducedMotion || tier === 'low') {
+      if (reducedMotion || tier !== 'high' || navigator.webdriver) {
         el.textContent = `${prefix}${end.toFixed(decimals)}${suffix}`;
         return;
       }
 
       let tween: gsap.core.Tween | null = null;
       let started = false;
+      let cancelled = false;
 
       const observer = new IntersectionObserver(
         (entries) => {
           if (entries[0]?.isIntersecting && !started) {
             started = true;
             observer.disconnect();
-            const state = { val: 0 };
-            let lastText = '';
-            tween = gsap.to(state, {
-              val: end,
-              duration: duration / 1000,
-              ease: 'power3.out',
-              onUpdate: () => {
-                const next = `${prefix}${state.val.toFixed(decimals)}${suffix}`;
-                if (next !== lastText) {
-                  lastText = next;
-                  el.textContent = next;
-                }
-              },
+            loadGsap().then(({ gsap }) => {
+              if (cancelled || !ref.current) return;
+              const state = { val: 0 };
+              let lastText = '';
+              tween = gsap.to(state, {
+                val: end,
+                duration: duration / 1000,
+                ease: 'power3.out',
+                onUpdate: () => {
+                  const next = `${prefix}${state.val.toFixed(decimals)}${suffix}`;
+                  if (next !== lastText) {
+                    lastText = next;
+                    el.textContent = next;
+                  }
+                },
+              });
             });
           }
         },
@@ -57,6 +61,7 @@ export const CountUp: React.FC<CountUpProps> = React.memo(
 
       observer.observe(el);
       return () => {
+        cancelled = true;
         observer.disconnect();
         tween?.kill();
       };

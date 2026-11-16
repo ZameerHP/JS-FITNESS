@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Phone, Mail, Instagram, Youtube, Facebook } from 'lucide-react';
-import { gsap } from '../../lib/gsap';
+import { loadGsap } from '../../lib/gsapBridge';
 import { useSiteContent } from '../../context/ContentContext';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useTier } from '../../lib/perfTier';
@@ -25,27 +25,31 @@ export const Footer: React.FC = React.memo(() => {
   useEffect(() => {
     if (reducedMotion || tier !== 'high' || navigator.webdriver || !plateRef.current || !footerRef.current)
       return;
+    let cancelled = false;
     let ctx: gsap.Context | null = null;
     let cancelTask: (() => void) | null = null;
     const cancelInteract = onFirstUserInteraction(() => {
       cancelTask = scheduleChunkedTask(() => {
-        if (!plateRef.current || !footerRef.current) return;
-        ctx = gsap.context(() => {
-          gsap.to(plateRef.current, {
-            rotation: 90,
-            ease: 'none',
-            scrollTrigger: {
-              trigger: footerRef.current,
-              start: 'top bottom',
-              end: 'bottom bottom',
-              scrub: true,
-            },
-          });
-        }, footerRef);
+        loadGsap().then(({ gsap }) => {
+          if (cancelled || !plateRef.current || !footerRef.current) return;
+          ctx = gsap.context(() => {
+            gsap.to(plateRef.current, {
+              rotation: 90,
+              ease: 'none',
+              scrollTrigger: {
+                trigger: footerRef.current,
+                start: 'top bottom',
+                end: 'bottom bottom',
+                scrub: true,
+              },
+            });
+          }, footerRef);
+        });
       });
     });
 
     return () => {
+      cancelled = true;
       cancelInteract();
       cancelTask?.();
       ctx?.revert();

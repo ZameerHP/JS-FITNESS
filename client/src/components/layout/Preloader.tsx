@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { gsap } from '../../lib/gsap';
+import { loadGsap } from '../../lib/gsapBridge';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { startPerfWatchdog, useTier, hasHardwareWebGL } from '../../lib/perfTier';
 
@@ -69,8 +69,12 @@ export const Preloader: React.FC<PreloaderProps> = ({ onComplete }) => {
     }
 
     const hardCap = setTimeout(finish, 3800);
+    let cancelled = false;
+    let ctx: gsap.Context | null = null;
 
-    const ctx = gsap.context(() => {
+    loadGsap().then(({ gsap }) => {
+      if (cancelled || !rootRef.current) return;
+      ctx = gsap.context(() => {
       const tl = gsap.timeline();
 
       tl.fromTo(
@@ -166,11 +170,13 @@ export const Preloader: React.FC<PreloaderProps> = ({ onComplete }) => {
           { yPercent: 100, duration: 0.55, ease: 'expo.inOut', onComplete: finish },
           2.55
         );
-    }, rootRef);
+      }, rootRef);
+    });
 
     return () => {
+      cancelled = true;
       clearTimeout(hardCap);
-      ctx.revert();
+      ctx?.revert();
     };
   }, [visible, reducedMotion, tier]);
 

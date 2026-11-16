@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { gsap } from '../../lib/gsap';
+import { loadGsap } from '../../lib/gsapBridge';
 import { HOME_COPY } from '../../config/siteConfig';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useTier } from '../../lib/perfTier';
@@ -22,11 +22,14 @@ export const FounderSection: React.FC = React.memo(() => {
     const el = sectionRef.current;
     if (!el || reducedMotion || tier !== 'high' || navigator.webdriver) return;
 
+    let cancelled = false;
     let ctx: gsap.Context | null = null;
     let cancelTask: (() => void) | null = null;
     const cancelInteract = onFirstUserInteraction(() => {
       cancelTask = scheduleChunkedTask(() => {
-        ctx = gsap.context(() => {
+        loadGsap().then(({ gsap }) => {
+          if (cancelled || !sectionRef.current) return;
+          ctx = gsap.context(() => {
           gsap.fromTo(
             [topLineRef.current, bottomLineRef.current],
             { scaleX: 0 },
@@ -87,10 +90,12 @@ export const FounderSection: React.FC = React.memo(() => {
             );
           }
         }, el);
+        });
       });
     });
 
     return () => {
+      cancelled = true;
       cancelInteract();
       cancelTask?.();
       ctx?.revert();

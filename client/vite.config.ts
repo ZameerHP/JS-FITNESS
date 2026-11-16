@@ -34,7 +34,12 @@ export default defineConfig({
     cssCodeSplit: true,
     modulePreload: {
       resolveDependencies: (_filename, deps) =>
-        deps.filter((d) => !/three-|HeroParticles|AdminLayout|CalendlyModal|PerfHud|Contact-/i.test(d)),
+        deps.filter(
+          (d) =>
+            !/three-|HeroParticles|AdminLayout|CalendlyModal|PerfHud|Contact-|gsap-|motion-|HomeBelowFold-|ShellFooter-|Preloader-|PageTransition-|CustomCursor-|VideoModal-/i.test(
+              d
+            )
+        ),
     },
     rollupOptions: {
       output: {

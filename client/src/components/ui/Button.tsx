@@ -21,7 +21,7 @@ interface ButtonProps {
   ariaLabel?: string;
 }
 
-export const Button: React.FC<ButtonProps> = ({
+export const Button: React.FC<ButtonProps> = React.memo(({
   children,
   variant = 'primary',
   to,
@@ -114,4 +114,4 @@ export const Button: React.FC<ButtonProps> = ({
       )}
     </Magnetic>
   );
-};
+});

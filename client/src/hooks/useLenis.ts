@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import Lenis from 'lenis';
-import { gsap, ScrollTrigger } from '../lib/gsap';
+import type Lenis from 'lenis';
+import { getLoadedGsap, loadGsap } from '../lib/gsapBridge';
 import { useReducedMotion } from './useReducedMotion';
 import { useTier } from '../lib/perfTier';
 
@@ -34,7 +34,7 @@ export function scrollToTopImmediate(): void {
 }
 
 export function scheduleScrollTriggerRefresh(): void {
-  ScrollTrigger.refresh();
+  getLoadedGsap()?.ScrollTrigger.refresh();
 }
 
 export function useLenis() {
@@ -83,8 +83,9 @@ export function useLenis() {
         }
         lastBodyHeight = document.body.scrollHeight;
         updateLimit();
-        if (ScrollTrigger.getAll().length > 0) {
-          ScrollTrigger.refresh();
+        const st = getLoadedGsap()?.ScrollTrigger;
+        if (st && st.getAll().length > 0) {
+          st.refresh();
         }
       }, 220);
     };
@@ -103,7 +104,8 @@ export function useLenis() {
     if (document.fonts && document.fonts.ready) {
       document.fonts.ready.then(() => {
         updateLimit();
-        if (ScrollTrigger.getAll().length > 0) {
+        const st = getLoadedGsap()?.ScrollTrigger;
+        if (st && st.getAll().length > 0) {
           scheduleSettledRefresh();
         }
       });
@@ -113,8 +115,9 @@ export function useLenis() {
       lastScrollTime = performance.now();
       if (scrollVal === lastDispatchedY) return;
       lastDispatchedY = scrollVal;
-      if (ScrollTrigger.getAll().length > 0) {
-        ScrollTrigger.update();
+      const st = getLoadedGsap()?.ScrollTrigger;
+      if (st && st.getAll().length > 0) {
+        st.update();
       }
       scrollSubscribers.forEach((cb) => cb(scrollVal, limitVal));
     };
@@ -131,67 +134,78 @@ export function useLenis() {
         if (resizeTimer) clearTimeout(resizeTimer);
       };
     } else {
-      const lenis = new Lenis({
-        lerp: 0.1,
-        smoothWheel: true,
-        syncTouch: false,
-        autoRaf: false,
+      let asyncCancelled = false;
+      let innerCleanup: (() => void) | null = null;
+
+      Promise.all([import('lenis'), loadGsap()]).then(([{ default: LenisCtor }, { gsap }]) => {
+        if (asyncCancelled) return;
+        const lenis = new LenisCtor({
+          lerp: 0.1,
+          smoothWheel: true,
+          syncTouch: false,
+          autoRaf: false,
+        });
+
+        lenisSingleton = lenis;
+        let tickerActive = false;
+
+        const handleLenisScroll = (e: { scroll?: number; limit?: number; velocity?: number }) => {
+          globalScrollVelocity = e.velocity ?? 0;
+          const scrollVal = e.scroll ?? window.scrollY;
+          const limitVal = e.limit ?? cachedLimitGlobal;
+          notifyScroll(scrollVal, limitVal);
+        };
+
+        const onWindowScroll = () => {
+          const scrollTop = window.scrollY || document.documentElement.scrollTop;
+          notifyScroll(scrollTop, cachedLimitGlobal);
+        };
+
+        const tick = (t: number) => {
+          lenis.raf(t * 1000);
+          if (!lenis.isScrolling && Math.abs(lenis.velocity) < 0.01) {
+            gsap.ticker.remove(tick);
+            tickerActive = false;
+          }
+        };
+
+        const wakeTicker = () => {
+          if (!tickerActive) {
+            tickerActive = true;
+            gsap.ticker.add(tick);
+          }
+        };
+
+        // Wrap scrollTo so programmatic Lenis scrolls wake the ticker automatically
+        const origScrollTo = lenis.scrollTo.bind(lenis);
+        lenis.scrollTo = ((target, opts) => {
+          wakeTicker();
+          return origScrollTo(target, opts);
+        }) as typeof lenis.scrollTo;
+
+        lenis.on('scroll', handleLenisScroll);
+        window.addEventListener('scroll', onWindowScroll, { passive: true });
+        window.addEventListener('wheel', wakeTicker, { passive: true });
+        window.addEventListener('touchstart', wakeTicker, { passive: true });
+        window.addEventListener('keydown', wakeTicker, { passive: true });
+        gsap.ticker.lagSmoothing(0);
+
+        innerCleanup = () => {
+          if (tickerActive) gsap.ticker.remove(tick);
+          lenis.off('scroll', handleLenisScroll);
+          window.removeEventListener('scroll', onWindowScroll);
+          window.removeEventListener('wheel', wakeTicker);
+          window.removeEventListener('touchstart', wakeTicker);
+          window.removeEventListener('keydown', wakeTicker);
+          lenis.destroy();
+          lenisSingleton = null;
+          globalScrollVelocity = 0;
+        };
       });
 
-      lenisSingleton = lenis;
-      let tickerActive = false;
-
-      const handleLenisScroll = (e: { scroll?: number; limit?: number; velocity?: number }) => {
-        globalScrollVelocity = e.velocity ?? 0;
-        const scrollVal = e.scroll ?? window.scrollY;
-        const limitVal = e.limit ?? cachedLimitGlobal;
-        notifyScroll(scrollVal, limitVal);
-      };
-
-      const onWindowScroll = () => {
-        const scrollTop = window.scrollY || document.documentElement.scrollTop;
-        notifyScroll(scrollTop, cachedLimitGlobal);
-      };
-
-      const tick = (t: number) => {
-        lenis.raf(t * 1000);
-        if (!lenis.isScrolling && Math.abs(lenis.velocity) < 0.01) {
-          gsap.ticker.remove(tick);
-          tickerActive = false;
-        }
-      };
-
-      const wakeTicker = () => {
-        if (!tickerActive) {
-          tickerActive = true;
-          gsap.ticker.add(tick);
-        }
-      };
-
-      // Wrap scrollTo so programmatic Lenis scrolls wake the ticker automatically
-      const origScrollTo = lenis.scrollTo.bind(lenis);
-      lenis.scrollTo = ((target, opts) => {
-        wakeTicker();
-        return origScrollTo(target, opts);
-      }) as typeof lenis.scrollTo;
-
-      lenis.on('scroll', handleLenisScroll);
-      window.addEventListener('scroll', onWindowScroll, { passive: true });
-      window.addEventListener('wheel', wakeTicker, { passive: true });
-      window.addEventListener('touchstart', wakeTicker, { passive: true });
-      window.addEventListener('keydown', wakeTicker, { passive: true });
-      gsap.ticker.lagSmoothing(0);
-
       cleanupEngine = () => {
-        if (tickerActive) gsap.ticker.remove(tick);
-        lenis.off('scroll', handleLenisScroll);
-        window.removeEventListener('scroll', onWindowScroll);
-        window.removeEventListener('wheel', wakeTicker);
-        window.removeEventListener('touchstart', wakeTicker);
-        window.removeEventListener('keydown', wakeTicker);
-        lenis.destroy();
-        lenisSingleton = null;
-        globalScrollVelocity = 0;
+        asyncCancelled = true;
+        innerCleanup?.();
         resizeObserver?.disconnect();
         if (resizeTimer) clearTimeout(resizeTimer);
       };

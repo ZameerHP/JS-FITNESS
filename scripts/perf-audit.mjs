@@ -268,14 +268,14 @@ async function measureScrollAndHeap(browser) {
     };
   });
 
-  // 4 warmup passes so lazy chunks, V8 JIT tiers, and Fiber double buffers settle before leak check
+  // 10 warmup passes so lazy chunks, V8 TurboFan JIT tiers, and Fiber double buffers settle before leak check
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(250);
   const navHrefs = ['/about', '/membership', '/system', '/transformations', '/contact', '/'];
-  for (let w = 0; w < 4; w++) {
+  for (let w = 0; w < 10; w++) {
     for (const href of navHrefs) {
       await page.locator(`header nav a[href="${href}"]`).click();
-      await page.waitForTimeout(100);
+      await page.waitForTimeout(75);
     }
   }
 

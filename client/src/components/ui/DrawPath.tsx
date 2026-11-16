@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { gsap } from '../../lib/gsap';
+import { loadGsap } from '../../lib/gsapBridge';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useTier } from '../../lib/perfTier';
 
@@ -53,25 +53,34 @@ export const DrawPath: React.FC<DrawPathProps> = ({
       });
 
       const state = { p: 1 };
-      const ctx = gsap.context(() => {
-        gsap.to(state, {
-          p: 0,
-          duration,
-          ease: 'power3.out',
-          scrollTrigger: {
-            trigger: path,
-            start: 'top 90%',
-            once: true,
-          },
-          onUpdate: () => {
-            const v = `${(len * state.p).toFixed(1)}px`;
-            path.style.strokeDashoffset = v;
-            if (glow) glow.style.strokeDashoffset = v;
-          },
-        });
-      }, path);
+      let cancelled = false;
+      let ctx: gsap.Context | null = null;
 
-      return () => ctx.revert();
+      loadGsap().then(({ gsap }) => {
+        if (cancelled || !pathRef.current) return;
+        ctx = gsap.context(() => {
+          gsap.to(state, {
+            p: 0,
+            duration,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: path,
+              start: 'top 90%',
+              once: true,
+            },
+            onUpdate: () => {
+              const v = `${(len * state.p).toFixed(1)}px`;
+              path.style.strokeDashoffset = v;
+              if (glow) glow.style.strokeDashoffset = v;
+            },
+          });
+        }, path);
+      });
+
+      return () => {
+        cancelled = true;
+        ctx?.revert();
+      };
     }
 
     // For scrub swooshes: compositor-only opacity + transform reveal via IntersectionObserver

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { gsap } from '../../lib/gsap';
+import { loadGsap } from '../../lib/gsapBridge';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useTier } from '../../lib/perfTier';
 
@@ -12,7 +12,7 @@ interface TiltCardProps {
   glareColor?: string;
 }
 
-export const TiltCard: React.FC<TiltCardProps> = ({
+const TiltCardInteractive: React.FC<TiltCardProps> = ({
   children,
   className = '',
   maxTilt = 6,
@@ -28,45 +28,48 @@ export const TiltCard: React.FC<TiltCardProps> = ({
   const rotToRef = useRef<gsap.QuickToFunc | null>(null);
   const scaleToRef = useRef<gsap.QuickToFunc | null>(null);
 
-  const reducedMotion = useReducedMotion();
-  const tier = useTier();
-  const enabled = !reducedMotion && tier === 'high' && !navigator.webdriver;
-
   useEffect(() => {
     const el = cardRef.current;
-    if (!el || !enabled) return;
+    if (!el) return;
 
-    const ctx = gsap.context(() => {
-      gsap.set(el, {
-        transformPerspective: 1000,
-        rotateZ: baseRotate,
-        rotateX: 0,
-        rotateY: 0,
-        scale: 1,
-      });
+    let cancelled = false;
+    let ctx: gsap.Context | null = null;
 
-      rxToRef.current = gsap.quickTo(el, 'rotateX', { duration: 0.35, ease: 'power3.out' });
-      ryToRef.current = gsap.quickTo(el, 'rotateY', { duration: 0.35, ease: 'power3.out' });
-      rotToRef.current = gsap.quickTo(el, 'rotateZ', { duration: 0.35, ease: 'power3.out' });
-      scaleToRef.current = gsap.quickTo(el, 'scale', { duration: 0.35, ease: 'power3.out' });
-    }, el);
+    loadGsap().then(({ gsap }) => {
+      if (cancelled || !cardRef.current) return;
+      ctx = gsap.context(() => {
+        gsap.set(el, {
+          transformPerspective: 1000,
+          rotateZ: baseRotate,
+          rotateX: 0,
+          rotateY: 0,
+          scale: 1,
+        });
+
+        rxToRef.current = gsap.quickTo(el, 'rotateX', { duration: 0.35, ease: 'power3.out' });
+        ryToRef.current = gsap.quickTo(el, 'rotateY', { duration: 0.35, ease: 'power3.out' });
+        rotToRef.current = gsap.quickTo(el, 'rotateZ', { duration: 0.35, ease: 'power3.out' });
+        scaleToRef.current = gsap.quickTo(el, 'scale', { duration: 0.35, ease: 'power3.out' });
+      }, el);
+    });
 
     return () => {
+      cancelled = true;
       rxToRef.current = null;
       ryToRef.current = null;
       rotToRef.current = null;
       scaleToRef.current = null;
-      ctx.revert();
+      ctx?.revert();
     };
-  }, [baseRotate, enabled]);
+  }, [baseRotate]);
 
   const handleEnter = () => {
-    if (!enabled || !cardRef.current) return;
+    if (!cardRef.current) return;
     rectRef.current = cardRef.current.getBoundingClientRect();
   };
 
   const handleMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!enabled || e.pointerType === 'touch') return;
+    if (e.pointerType === 'touch') return;
     const rect = rectRef.current || cardRef.current?.getBoundingClientRect();
     if (!rect || !rect.width || !rect.height) return;
     rectRef.current = rect;
@@ -103,10 +106,7 @@ export const TiltCard: React.FC<TiltCardProps> = ({
       onPointerEnter={handleEnter}
       onPointerMove={handleMove}
       onPointerLeave={handleLeave}
-      style={{
-        transformStyle: 'preserve-3d',
-        transform: !enabled && baseRotate ? `rotate(${baseRotate}deg)` : undefined,
-      }}
+      style={{ transformStyle: 'preserve-3d' }}
       className={`relative ${className}`}
     >
       {children}
@@ -118,3 +118,31 @@ export const TiltCard: React.FC<TiltCardProps> = ({
     </div>
   );
 };
+
+export const TiltCard: React.FC<TiltCardProps> = React.memo(
+  ({ children, className = '', maxTilt = 6, baseRotate = 0, straightenOnHover = false, glareColor = 'rgba(182, 245, 0, 0.16)' }) => {
+    const reducedMotion = useReducedMotion();
+    const tier = useTier();
+    if (reducedMotion || tier !== 'high' || navigator.webdriver) {
+      return (
+        <div
+          style={baseRotate ? { transform: `rotate(${baseRotate}deg)` } : undefined}
+          className={`relative ${className}`}
+        >
+          {children}
+        </div>
+      );
+    }
+    return (
+      <TiltCardInteractive
+        className={className}
+        maxTilt={maxTilt}
+        baseRotate={baseRotate}
+        straightenOnHover={straightenOnHover}
+        glareColor={glareColor}
+      >
+        {children}
+      </TiltCardInteractive>
+    );
+  }
+);

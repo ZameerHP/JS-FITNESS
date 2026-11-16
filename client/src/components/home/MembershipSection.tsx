@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Star, BarChart3, Crown } from 'lucide-react';
-import { gsap } from '../../lib/gsap';
+import { loadGsap } from '../../lib/gsapBridge';
 import { HOME_COPY, PricingPhase } from '../../config/siteConfig';
 import { useSiteContent } from '../../context/ContentContext';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
@@ -44,11 +44,14 @@ export const MembershipSection: React.FC = React.memo(() => {
       return;
     }
 
+    let cancelled = false;
     let ctx: gsap.Context | null = null;
     let cancelTask: (() => void) | null = null;
     const cancelInteract = onFirstUserInteraction(() => {
       cancelTask = scheduleChunkedTask(() => {
-        ctx = gsap.context(() => {
+        loadGsap().then(({ gsap }) => {
+          if (cancelled || !sectionRef.current) return;
+          ctx = gsap.context(() => {
           if (bgRef.current) {
             gsap.fromTo(
               bgRef.current,
@@ -145,10 +148,12 @@ export const MembershipSection: React.FC = React.memo(() => {
             );
           }
         }, el);
+        });
       });
     });
 
     return () => {
+      cancelled = true;
       cancelInteract();
       cancelTask?.();
       ctx?.revert();

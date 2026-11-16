@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { Play } from 'lucide-react';
-import { gsap } from '../../lib/gsap';
+import { loadGsap } from '../../lib/gsapBridge';
 import { HOME_COPY } from '../../config/siteConfig';
 import { useSiteContent } from '../../context/ContentContext';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
@@ -44,15 +44,16 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
     const hasWalkthroughVideo = videos.some((v) => v.visible);
 
     useEffect(() => {
+      if (tier !== 'high' || navigator.webdriver) return;
       const check = () => setIsMobile(window.innerWidth < 768);
       window.addEventListener('resize', check, { passive: true });
       return () => window.removeEventListener('resize', check);
-    }, []);
+    }, [tier]);
 
     // Track Hero visibility + tab visibility for pausing WebGL & breathing loop
     useEffect(() => {
       const el = sectionRef.current;
-      if (!el) return;
+      if (!el || tier !== 'high' || reducedMotion || navigator.webdriver) return;
       let inViewport = true;
 
       const sync = () => {
@@ -73,7 +74,7 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
         io.disconnect();
         document.removeEventListener('visibilitychange', sync);
       };
-    }, []);
+    }, [tier, reducedMotion]);
 
     // Mount Three.js particles ONLY on interactive hardware-WebGL desktop high tier after 4.5s if near top
     useEffect(() => {
@@ -122,49 +123,58 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
       if (reducedMotion || isMobile || tier !== 'high' || navigator.webdriver || !heroVisible)
         return;
 
-      let aX: gsap.QuickToFunc | null = null;
-      let aY: gsap.QuickToFunc | null = null;
-      let tX: gsap.QuickToFunc | null = null;
-      let tY: gsap.QuickToFunc | null = null;
-      let wX: gsap.QuickToFunc | null = null;
-      let wY: gsap.QuickToFunc | null = null;
+      let cancelled = false;
+      let ctx: gsap.Context | null = null;
+      let unsub: (() => void) | null = null;
 
-      const ctx = gsap.context(() => {
-        aX = athleteWrapRef.current
-          ? gsap.quickTo(athleteWrapRef.current, 'x', { duration: 0.55, ease: 'power3.out' })
-          : null;
-        aY = athleteWrapRef.current
-          ? gsap.quickTo(athleteWrapRef.current, 'y', { duration: 0.55, ease: 'power3.out' })
-          : null;
-        tX = triangleWrapRef.current
-          ? gsap.quickTo(triangleWrapRef.current, 'x', { duration: 0.55, ease: 'power3.out' })
-          : null;
-        tY = triangleWrapRef.current
-          ? gsap.quickTo(triangleWrapRef.current, 'y', { duration: 0.55, ease: 'power3.out' })
-          : null;
-        wX = watermarkRef.current
-          ? gsap.quickTo(watermarkRef.current, 'x', { duration: 0.55, ease: 'power3.out' })
-          : null;
-        wY = watermarkRef.current
-          ? gsap.quickTo(watermarkRef.current, 'y', { duration: 0.55, ease: 'power3.out' })
-          : null;
-      }, sectionRef);
+      loadGsap().then(({ gsap }) => {
+        if (cancelled || !sectionRef.current) return;
 
-      const unsub = subscribePointerTick((ptr) => {
-        pointerRef.current.normX = ptr.normX;
-        pointerRef.current.normY = ptr.normY;
-        if (!ptr.dirty) return;
-        aX?.(ptr.normX * 12);
-        aY?.(ptr.normY * 8);
-        tX?.(ptr.normX * 24);
-        tY?.(ptr.normY * 16);
-        wX?.(ptr.normX * -8);
-        wY?.(ptr.normY * -5);
+        let aX: gsap.QuickToFunc | null = null;
+        let aY: gsap.QuickToFunc | null = null;
+        let tX: gsap.QuickToFunc | null = null;
+        let tY: gsap.QuickToFunc | null = null;
+        let wX: gsap.QuickToFunc | null = null;
+        let wY: gsap.QuickToFunc | null = null;
+
+        ctx = gsap.context(() => {
+          aX = athleteWrapRef.current
+            ? gsap.quickTo(athleteWrapRef.current, 'x', { duration: 0.55, ease: 'power3.out' })
+            : null;
+          aY = athleteWrapRef.current
+            ? gsap.quickTo(athleteWrapRef.current, 'y', { duration: 0.55, ease: 'power3.out' })
+            : null;
+          tX = triangleWrapRef.current
+            ? gsap.quickTo(triangleWrapRef.current, 'x', { duration: 0.55, ease: 'power3.out' })
+            : null;
+          tY = triangleWrapRef.current
+            ? gsap.quickTo(triangleWrapRef.current, 'y', { duration: 0.55, ease: 'power3.out' })
+            : null;
+          wX = watermarkRef.current
+            ? gsap.quickTo(watermarkRef.current, 'x', { duration: 0.55, ease: 'power3.out' })
+            : null;
+          wY = watermarkRef.current
+            ? gsap.quickTo(watermarkRef.current, 'y', { duration: 0.55, ease: 'power3.out' })
+            : null;
+        }, sectionRef);
+
+        unsub = subscribePointerTick((ptr) => {
+          pointerRef.current.normX = ptr.normX;
+          pointerRef.current.normY = ptr.normY;
+          if (!ptr.dirty) return;
+          aX?.(ptr.normX * 12);
+          aY?.(ptr.normY * 8);
+          tX?.(ptr.normX * 24);
+          tY?.(ptr.normY * 16);
+          wX?.(ptr.normX * -8);
+          wY?.(ptr.normY * -5);
+        });
       });
 
       return () => {
-        unsub();
-        ctx.revert();
+        cancelled = true;
+        unsub?.();
+        ctx?.revert();
       };
     }, [reducedMotion, isMobile, tier, heroVisible]);
 
@@ -178,7 +188,12 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
         return;
       }
 
-      const ctx = gsap.context(() => {
+      let cancelled = false;
+      let ctx: gsap.Context | null = null;
+
+      loadGsap().then(({ gsap }) => {
+        if (cancelled || !sectionRef.current) return;
+        ctx = gsap.context(() => {
         const tl = gsap.timeline();
 
         tl.fromTo(
@@ -288,9 +303,13 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
             },
           });
         }
-      }, section);
+        }, section);
+      });
 
-      return () => ctx.revert();
+      return () => {
+        cancelled = true;
+        ctx?.revert();
+      };
     }, [ready, reducedMotion, isMobile, tier]);
 
     const particleCount = tier === 'high' ? (isMobile ? 60 : 150) : 60;
@@ -310,7 +329,6 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
             width={1920}
             height={1080}
             fetchPriority="low"
-            decoding="async"
             alt="JS FITNESS INC Calgary gym interior"
             className="h-full w-full object-cover opacity-35"
           />
@@ -402,7 +420,6 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
             width={1100}
             height={1466}
             fetchPriority="high"
-            decoding="async"
             alt="Muscular athlete representing JS FITNESS INC discipline"
             className={`relative z-10 h-[78%] sm:h-[90%] lg:h-[96%] w-auto max-w-none object-contain object-bottom opacity-100 ${
               heroVisible && tier === 'high' && !isMobile ? 'athlete-breathe' : ''

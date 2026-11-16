@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { gsap } from '../../lib/gsap';
+import { loadGsap } from '../../lib/gsapBridge';
 import { HOME_COPY } from '../../config/siteConfig';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useTier } from '../../lib/perfTier';
@@ -43,6 +43,7 @@ export const SystemSection: React.FC = React.memo(() => {
       return;
     }
 
+    let cancelled = false;
     let floatTween: gsap.core.Tween | null = null;
     let cometTween: gsap.core.Tween | null = null;
     let jitterInterval: ReturnType<typeof setInterval> | null = null;
@@ -77,7 +78,9 @@ export const SystemSection: React.FC = React.memo(() => {
 
     const cancelInteract = onFirstUserInteraction(() => {
       cancelTask = scheduleChunkedTask(() => {
-        ctx = gsap.context(() => {
+        loadGsap().then(({ gsap }) => {
+          if (cancelled || !sectionRef.current) return;
+          ctx = gsap.context(() => {
           if (phoneRef.current) {
             gsap.set(phoneRef.current, { transformPerspective: 1100, rotateY: -6 });
             rxToRef.current = gsap.quickTo(phoneRef.current, 'rotateX', {
@@ -196,6 +199,7 @@ export const SystemSection: React.FC = React.memo(() => {
           );
         }, el);
         syncLoops();
+        });
       });
     });
 
@@ -210,6 +214,7 @@ export const SystemSection: React.FC = React.memo(() => {
     document.addEventListener('visibilitychange', syncLoops);
 
     return () => {
+      cancelled = true;
       cancelInteract();
       cancelTask?.();
       io.disconnect();

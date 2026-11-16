@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { gsap } from './gsap';
+import { useSyncExternalStore } from 'react';
+import { loadGsap } from './gsapBridge';
 
 export type PerfTier = 'high' | 'medium' | 'low';
 
@@ -123,13 +123,10 @@ export function subscribeTier(fn: (tier: PerfTier) => void): () => void {
   return () => listeners.delete(fn);
 }
 
+const subscribeTierStore = (cb: () => void): (() => void) => subscribeTier(cb);
+
 export function useTier(): PerfTier {
-  const [tier, setTier] = useState<PerfTier>(currentTier);
-  useEffect(() => {
-    setTier(currentTier);
-    return subscribeTier(setTier);
-  }, []);
-  return tier;
+  return useSyncExternalStore(subscribeTierStore, getTier, () => 'high');
 }
 
 let watchdogStarted = false;
@@ -156,8 +153,6 @@ export function startPerfWatchdog(): () => void {
     slow = 0;
     last = performance.now();
   };
-  document.addEventListener('visibilitychange', onVisibility);
-
   const tick = () => {
     if (paused || currentTier === 'low') return;
     frames += 1;
@@ -173,9 +168,19 @@ export function startPerfWatchdog(): () => void {
     }
   };
 
-  gsap.ticker.add(tick);
+  let cancelled = false;
+  let removeTicker: (() => void) | null = null;
+  document.addEventListener('visibilitychange', onVisibility);
+
+  loadGsap().then(({ gsap }) => {
+    if (cancelled) return;
+    gsap.ticker.add(tick);
+    removeTicker = () => gsap.ticker.remove(tick);
+  });
+
   return () => {
-    gsap.ticker.remove(tick);
+    cancelled = true;
+    removeTicker?.();
     document.removeEventListener('visibilitychange', onVisibility);
     watchdogStarted = false;
   };

@@ -7,4 +7,9 @@ ScrollTrigger.config({
   limitCallbacks: true,
 });
 
+if (typeof window !== 'undefined') {
+  (window as Window & { __scrollTriggerRefresh?: () => void }).__scrollTriggerRefresh = () =>
+    ScrollTrigger.refresh();
+}
+
 export { gsap, ScrollTrigger };

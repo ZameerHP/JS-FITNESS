@@ -1,12 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { SEOHead } from '../components/ui/SEOHead';
 import { HeroSection } from '../components/home/HeroSection';
 import { FeatureStrip } from '../components/home/FeatureStrip';
-import { MembershipSection } from '../components/home/MembershipSection';
-import { SystemSection } from '../components/home/SystemSection';
-import { TransformationsSection } from '../components/home/TransformationsSection';
-import { FounderSection } from '../components/home/FounderSection';
-import { BookingCardsSection } from '../components/home/BookingCardsSection';
+
+const loadHomeBelowFold = () => import('../components/home/HomeBelowFold');
+let ResolvedBelowFold: React.ComponentType<{ onPrefetchCalendly?: () => void }> | null = null;
 
 interface HomeProps {
   preloaderDone: boolean;
@@ -14,6 +12,26 @@ interface HomeProps {
 }
 
 export const Home: React.FC<HomeProps> = React.memo(({ preloaderDone, onPrefetchCalendly }) => {
+  const [BelowFoldComp, setBelowFoldComp] = useState<
+    React.ComponentType<{ onPrefetchCalendly?: () => void }> | null
+  >(() => ResolvedBelowFold);
+
+  useEffect(() => {
+    if (ResolvedBelowFold) return;
+    let cancelled = false;
+    const rafId = window.requestAnimationFrame(() => {
+      loadHomeBelowFold().then((m) => {
+        ResolvedBelowFold = m.HomeBelowFold;
+        if (cancelled) return;
+        React.startTransition(() => setBelowFoldComp(() => m.HomeBelowFold));
+      });
+    });
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(rafId);
+    };
+  }, []);
+
   return (
     <>
       <SEOHead
@@ -23,11 +41,11 @@ export const Home: React.FC<HomeProps> = React.memo(({ preloaderDone, onPrefetch
       />
       <HeroSection ready={preloaderDone} onPrefetchCalendly={onPrefetchCalendly} />
       <FeatureStrip />
-      <MembershipSection />
-      <SystemSection />
-      <TransformationsSection />
-      <FounderSection />
-      <BookingCardsSection onPrefetchCalendly={onPrefetchCalendly} />
+      {BelowFoldComp ? (
+        <BelowFoldComp onPrefetchCalendly={onPrefetchCalendly} />
+      ) : (
+        <div className="min-h-[2600px] bg-[#050505]" />
+      )}
     </>
   );
 });

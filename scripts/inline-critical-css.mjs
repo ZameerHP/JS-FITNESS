@@ -28,16 +28,16 @@ html = html.replace(
   }
 );
 
-// Strip non-critical modulepreload tags (three.js, AdminLayout, Calendly, PerfHud, Contact)
+// Strip non-critical modulepreload tags
 html = html.replace(
-  /\s*<link\b[^>]*rel=["']modulepreload["'][^>]*href=["'][^"']*(?:three-|HeroParticles|AdminLayout|CalendlyModal|PerfHud|Contact-)[^"']*["'][^>]*>\s*/gi,
+  /\s*<link\b[^>]*rel=["']modulepreload["'][^>]*href=["'][^"']*(?:three-|HeroParticles|AdminLayout|CalendlyModal|PerfHud|Contact-|gsap-|motion-|HomeBelowFold-|ShellFooter-|Preloader-|PageTransition-|CustomCursor-|VideoModal-)[^"']*["'][^>]*>\s*/gi,
   '\n    '
 );
 
 // Inject missing modulepreload links for core chunks so browser parses in parallel
 if (fs.existsSync(assetsDir)) {
   const files = fs.readdirSync(assetsDir);
-  const wantPrefixes = ['react-', 'gsap-'];
+  const wantPrefixes = ['react-'];
   const tagsToAdd = [];
 
   for (const prefix of wantPrefixes) {

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { gsap } from '../../lib/gsap';
+import { loadGsap } from '../../lib/gsapBridge';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useTier } from '../../lib/perfTier';
 import { scrollToTopImmediate } from '../../hooks/useLenis';
@@ -23,15 +23,22 @@ export const PageTransition: React.FC = React.memo(() => {
     if (reducedMotion || tier !== 'high' || navigator.webdriver || !overlayRef.current) return;
 
     const el = overlayRef.current;
-    gsap.killTweensOf(el);
-    const tl = gsap.timeline();
-    tl.set(el, { xPercent: -100, display: 'flex' })
-      .to(el, { xPercent: 0, duration: 0.24, ease: 'power3.inOut' })
-      .to(el, { xPercent: 100, duration: 0.26, ease: 'power3.inOut', delay: 0.04 })
-      .set(el, { display: 'none' });
+    let cancelled = false;
+    let tl: gsap.core.Timeline | null = null;
+
+    loadGsap().then(({ gsap }) => {
+      if (cancelled || !overlayRef.current) return;
+      gsap.killTweensOf(el);
+      tl = gsap.timeline();
+      tl.set(el, { xPercent: -100, display: 'flex' })
+        .to(el, { xPercent: 0, duration: 0.24, ease: 'power3.inOut' })
+        .to(el, { xPercent: 100, duration: 0.26, ease: 'power3.inOut', delay: 0.04 })
+        .set(el, { display: 'none' });
+    });
 
     return () => {
-      tl.kill();
+      cancelled = true;
+      tl?.kill();
     };
   }, [location.pathname, reducedMotion, tier]);
 

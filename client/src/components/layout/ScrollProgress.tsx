@@ -1,5 +1,4 @@
 import React, { useEffect, useRef } from 'react';
-import { gsap } from '../../lib/gsap';
 import { subscribeScroll } from '../../hooks/useLenis';
 
 export const ScrollProgress: React.FC = React.memo(() => {
@@ -9,12 +8,11 @@ export const ScrollProgress: React.FC = React.memo(() => {
     const el = barRef.current;
     if (!el) return;
 
-    const setScale = gsap.quickSetter(el, 'scaleX');
-    setScale(0);
+    el.style.transform = 'scaleX(0)';
 
     return subscribeScroll((scrollY, limit) => {
       const ratio = limit > 0 ? Math.min(1, Math.max(0, scrollY / limit)) : 0;
-      setScale(ratio);
+      el.style.transform = `scaleX(${ratio.toFixed(4)})`;
     });
   }, []);
 

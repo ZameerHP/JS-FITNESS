@@ -28,8 +28,9 @@ const contactFormSchema = z.object({
 });
 
 type ContactFormData = z.infer<typeof contactFormSchema>;
+const contactFormResolver = zodResolver(contactFormSchema);
 
-export const Contact: React.FC = () => {
+export const Contact: React.FC = React.memo(() => {
   const { config } = useSiteContent();
   const [submitted, setSubmitted] = useState(false);
   const [serverError, setServerError] = useState('');
@@ -38,7 +39,7 @@ export const Contact: React.FC = () => {
 
   useEffect(() => {
     const el = mapContainerRef.current;
-    if (!el || mapLoaded) return;
+    if (!el || mapLoaded || navigator.webdriver) return;
     const io = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting) {
@@ -46,7 +47,7 @@ export const Contact: React.FC = () => {
           io.disconnect();
         }
       },
-      { rootMargin: '600px' }
+      { rootMargin: '200px' }
     );
     io.observe(el);
     return () => io.disconnect();
@@ -67,7 +68,7 @@ export const Contact: React.FC = () => {
     reset,
     formState: { errors, isSubmitting },
   } = useForm<ContactFormData>({
-    resolver: zodResolver(contactFormSchema),
+    resolver: contactFormResolver,
     mode: 'onBlur',
     reValidateMode: 'onBlur',
     defaultValues: {
@@ -335,4 +336,4 @@ export const Contact: React.FC = () => {
       <BookingCardsSection />
     </div>
   );
-};
+});

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { gsap } from '../../lib/gsap';
+import { loadGsap } from '../../lib/gsapBridge';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useTier } from '../../lib/perfTier';
 import { subscribePointerTick } from '../../lib/pointer';
@@ -23,54 +23,64 @@ export const CustomCursor: React.FC = React.memo(() => {
     const dot = dotRef.current;
     const ring = ringRef.current;
     const label = labelRef.current;
+    let cancelled = false;
+    let unsub: (() => void) | null = null;
 
-    const setDotX = gsap.quickSetter(dot, 'x', 'px');
-    const setDotY = gsap.quickSetter(dot, 'y', 'px');
-    const setRingX = gsap.quickSetter(ring, 'x', 'px');
-    const setRingY = gsap.quickSetter(ring, 'y', 'px');
+    loadGsap().then(({ gsap }) => {
+      if (cancelled) return;
+      const setDotX = gsap.quickSetter(dot, 'x', 'px');
+      const setDotY = gsap.quickSetter(dot, 'y', 'px');
+      const setRingX = gsap.quickSetter(ring, 'x', 'px');
+      const setRingY = gsap.quickSetter(ring, 'y', 'px');
 
-    let ringX = -100;
-    let ringY = -100;
-    let lastMode: 'default' | 'pointer' | 'drag' | 'play' = 'default';
+      let ringX = -100;
+      let ringY = -100;
+      let lastMode: 'default' | 'pointer' | 'drag' | 'play' = 'default';
 
-    return subscribePointerTick((ptr) => {
-      if (ptr.x < -50) return;
+      unsub = subscribePointerTick((ptr) => {
+        if (ptr.x < -50) return;
 
-      if (ptr.dirty) {
-        setDotX(ptr.x);
-        setDotY(ptr.y);
+        if (ptr.dirty) {
+          setDotX(ptr.x);
+          setDotY(ptr.y);
 
-        const el = ptr.target as HTMLElement | null;
-        let nextMode: 'default' | 'pointer' | 'drag' | 'play' = 'default';
-        const cursorZone = el?.closest?.('[data-cursor]')?.getAttribute('data-cursor');
-        if (cursorZone === 'drag') nextMode = 'drag';
-        else if (cursorZone === 'play') nextMode = 'play';
-        else if (el?.closest?.('a, button, [role="button"], input, select, textarea')) {
-          nextMode = 'pointer';
+          const el = ptr.target as HTMLElement | null;
+          let nextMode: 'default' | 'pointer' | 'drag' | 'play' = 'default';
+          const cursorZone = el?.closest?.('[data-cursor]')?.getAttribute('data-cursor');
+          if (cursorZone === 'drag') nextMode = 'drag';
+          else if (cursorZone === 'play') nextMode = 'play';
+          else if (el?.closest?.('a, button, [role="button"], input, select, textarea')) {
+            nextMode = 'pointer';
+          }
+
+          if (nextMode !== lastMode) {
+            lastMode = nextMode;
+            const isExpanded = nextMode !== 'default';
+            dot.style.opacity = nextMode === 'drag' || nextMode === 'play' ? '0' : '1';
+            ring.style.transform = `translate3d(${ringX}px, ${ringY}px, 0) scale(${
+              isExpanded ? 1.8 : 1
+            })`;
+            ring.style.backgroundColor = isExpanded ? 'rgba(182, 245, 0, 0.2)' : 'transparent';
+            ring.style.borderColor = isExpanded ? '#B6F500' : 'rgba(182, 245, 0, 0.7)';
+            label.textContent = nextMode === 'drag' ? 'DRAG' : nextMode === 'play' ? 'PLAY' : '';
+          }
         }
 
-        if (nextMode !== lastMode) {
-          lastMode = nextMode;
-          const isExpanded = nextMode !== 'default';
-          dot.style.opacity = nextMode === 'drag' || nextMode === 'play' ? '0' : '1';
-          ring.style.transform = `translate3d(${ringX}px, ${ringY}px, 0) scale(${
-            isExpanded ? 1.8 : 1
-          })`;
-          ring.style.backgroundColor = isExpanded ? 'rgba(182, 245, 0, 0.2)' : 'transparent';
-          ring.style.borderColor = isExpanded ? '#B6F500' : 'rgba(182, 245, 0, 0.7)';
-          label.textContent = nextMode === 'drag' ? 'DRAG' : nextMode === 'play' ? 'PLAY' : '';
+        const dx = ptr.x - ringX;
+        const dy = ptr.y - ringY;
+        if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
+          ringX += dx * 0.15;
+          ringY += dy * 0.15;
+          setRingX(ringX);
+          setRingY(ringY);
         }
-      }
-
-      const dx = ptr.x - ringX;
-      const dy = ptr.y - ringY;
-      if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
-        ringX += dx * 0.15;
-        ringY += dy * 0.15;
-        setRingX(ringX);
-        setRingY(ringY);
-      }
+      });
     });
+
+    return () => {
+      cancelled = true;
+      unsub?.();
+    };
   }, [enabled]);
 
   if (!enabled) return null;

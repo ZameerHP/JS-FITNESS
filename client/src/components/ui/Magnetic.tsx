@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { gsap } from '../../lib/gsap';
+import { loadGsap, getLoadedGsap } from '../../lib/gsapBridge';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useTier } from '../../lib/perfTier';
 
@@ -9,7 +9,7 @@ interface MagneticProps {
   className?: string;
 }
 
-export const Magnetic: React.FC<MagneticProps> = ({
+const MagneticInteractive: React.FC<MagneticProps> = ({
   children,
   maxPull = 8,
   className = '',
@@ -18,31 +18,37 @@ export const Magnetic: React.FC<MagneticProps> = ({
   const rectRef = useRef<DOMRect | null>(null);
   const xToRef = useRef<gsap.QuickToFunc | null>(null);
   const yToRef = useRef<gsap.QuickToFunc | null>(null);
-  const reducedMotion = useReducedMotion();
-  const tier = useTier();
-  const enabled = !reducedMotion && tier === 'high' && !navigator.webdriver;
+  const loadingRef = useRef(false);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
+    mountedRef.current = true;
     const el = ref.current;
     return () => {
-      if (el) gsap.killTweensOf(el);
+      mountedRef.current = false;
+      if (el) getLoadedGsap()?.gsap.killTweensOf(el);
       xToRef.current = null;
       yToRef.current = null;
     };
   }, []);
 
   const handleEnter = () => {
-    if (!enabled || !ref.current) return;
+    if (!ref.current) return;
     if (window.matchMedia('(pointer: coarse)').matches) return;
     rectRef.current = ref.current.getBoundingClientRect();
-    if (!xToRef.current) {
-      xToRef.current = gsap.quickTo(ref.current, 'x', { duration: 0.3, ease: 'power3.out' });
-      yToRef.current = gsap.quickTo(ref.current, 'y', { duration: 0.3, ease: 'power3.out' });
+    if (!xToRef.current && !loadingRef.current) {
+      loadingRef.current = true;
+      loadGsap().then(({ gsap }) => {
+        loadingRef.current = false;
+        if (!mountedRef.current || !ref.current) return;
+        xToRef.current = gsap.quickTo(ref.current, 'x', { duration: 0.3, ease: 'power3.out' });
+        yToRef.current = gsap.quickTo(ref.current, 'y', { duration: 0.3, ease: 'power3.out' });
+      });
     }
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!enabled || e.pointerType === 'touch') return;
+    if (e.pointerType === 'touch') return;
     const rect = rectRef.current;
     if (!rect || !rect.width || !rect.height) return;
     const relX = (e.clientX - (rect.left + rect.width / 2)) / (rect.width / 2);
@@ -69,3 +75,18 @@ export const Magnetic: React.FC<MagneticProps> = ({
     </div>
   );
 };
+
+export const Magnetic: React.FC<MagneticProps> = React.memo(
+  ({ children, maxPull = 8, className = '' }) => {
+    const reducedMotion = useReducedMotion();
+    const tier = useTier();
+    if (reducedMotion || tier !== 'high' || navigator.webdriver) {
+      return <div className={`inline-block ${className}`}>{children}</div>;
+    }
+    return (
+      <MagneticInteractive maxPull={maxPull} className={className}>
+        {children}
+      </MagneticInteractive>
+    );
+  }
+);

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { CalendarDays, Diamond } from 'lucide-react';
-import { gsap } from '../../lib/gsap';
+import { loadGsap } from '../../lib/gsapBridge';
 import { HOME_COPY } from '../../config/siteConfig';
 import { useSiteContent } from '../../context/ContentContext';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
@@ -29,6 +29,7 @@ export const BookingCardsSection: React.FC<BookingCardsSectionProps> = React.mem
       const el = sectionRef.current;
       if (!el || reducedMotion || tier !== 'high' || navigator.webdriver) return;
 
+      let cancelled = false;
       let floatD: gsap.core.Tween | null = null;
       let floatS: gsap.core.Tween | null = null;
       let ctx: gsap.Context | null = null;
@@ -47,7 +48,9 @@ export const BookingCardsSection: React.FC<BookingCardsSectionProps> = React.mem
 
       const cancelInteract = onFirstUserInteraction(() => {
         cancelTask = scheduleChunkedTask(() => {
-          ctx = gsap.context(() => {
+          loadGsap().then(({ gsap }) => {
+            if (cancelled || !sectionRef.current) return;
+            ctx = gsap.context(() => {
             if (cardsRef.current) {
               gsap.fromTo(
                 cardsRef.current.children,
@@ -86,8 +89,9 @@ export const BookingCardsSection: React.FC<BookingCardsSectionProps> = React.mem
               ease: 'sine.inOut',
               paused: true,
             });
-          }, el);
-          sync();
+            }, el);
+            sync();
+          });
         });
       });
 
@@ -102,6 +106,7 @@ export const BookingCardsSection: React.FC<BookingCardsSectionProps> = React.mem
       document.addEventListener('visibilitychange', sync);
 
       return () => {
+        cancelled = true;
         cancelInteract();
         cancelTask?.();
         io.disconnect();

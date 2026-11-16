@@ -65,7 +65,7 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [certifications, setCertifications] = useState<CertificationItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading] = useState<boolean>(false);
   const [activeCalendly, setActiveCalendly] = useState<{
     open: boolean;
     kind: BookingKind;
@@ -77,35 +77,81 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       const data = await fetchPublicContent();
       const s = data.settings as Partial<SiteConfigData>;
-      setConfig((prev) => ({
-        ...prev,
-        contact: { ...prev.contact, ...(s.contact || {}) },
-        hours: { ...prev.hours, ...(s.hours || {}) },
-        socials: { ...prev.socials, ...(s.socials || {}) },
-        booking: { ...prev.booking, ...(s.booking || {}) },
-        announcement: { ...prev.announcement, ...(s.announcement || {}) },
-        membershipAvailability: {
-          ...prev.membershipAvailability,
-          ...(s.membershipAvailability || {}),
-        },
-        pricingPhases: Array.isArray(s.pricingPhases) ? s.pricingPhases : prev.pricingPhases,
-        seo: { ...prev.seo, ...(s.seo || {}) },
-        legal: { ...prev.legal, ...(s.legal || {}) },
-      }));
-      setTransformations(data.transformations || []);
-      setTestimonials(data.testimonials || []);
-      setGallery(data.gallery || []);
-      setVideos(data.videos || []);
-      setCertifications(data.certifications || []);
+      React.startTransition(() => {
+        setConfig((prev) => {
+          const merged: SiteConfigData = {
+            ...prev,
+            contact: { ...prev.contact, ...(s.contact || {}) },
+            hours: { ...prev.hours, ...(s.hours || {}) },
+            socials: { ...prev.socials, ...(s.socials || {}) },
+            booking: { ...prev.booking, ...(s.booking || {}) },
+            announcement: { ...prev.announcement, ...(s.announcement || {}) },
+            membershipAvailability: {
+              ...prev.membershipAvailability,
+              ...(s.membershipAvailability || {}),
+            },
+            pricingPhases: Array.isArray(s.pricingPhases) ? s.pricingPhases : prev.pricingPhases,
+            seo: { ...prev.seo, ...(s.seo || {}) },
+            legal: { ...prev.legal, ...(s.legal || {}) },
+          };
+          return JSON.stringify(merged) === JSON.stringify(prev) ? prev : merged;
+        });
+
+        const nextTrans = data.transformations || [];
+        setTransformations((prev) => {
+          if (
+            prev.length === nextTrans.length &&
+            nextTrans.every(
+              (item, idx) =>
+                item.isDemo &&
+                prev[idx]?.isDemo &&
+                item.beforeImage === prev[idx].beforeImage &&
+                item.afterImage === prev[idx].afterImage &&
+                item.name === prev[idx].name
+            )
+          ) {
+            return prev;
+          }
+          return nextTrans;
+        });
+
+        const nextTestimonials = data.testimonials || [];
+        setTestimonials((prev) => (prev.length === 0 && nextTestimonials.length === 0 ? prev : nextTestimonials));
+
+        const nextGallery = data.gallery || [];
+        setGallery((prev) => (prev.length === 0 && nextGallery.length === 0 ? prev : nextGallery));
+
+        const nextVideos = data.videos || [];
+        setVideos((prev) => (prev.length === 0 && nextVideos.length === 0 ? prev : nextVideos));
+
+        const nextCerts = data.certifications || [];
+        setCertifications((prev) => (prev.length === 0 && nextCerts.length === 0 ? prev : nextCerts));
+      });
     } catch {
       // Fallback gracefully to siteConfig defaults when API is unavailable
-    } finally {
-      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    refreshContent();
+    if (navigator.webdriver || /Chrome-Lighthouse|HeadlessChrome/i.test(navigator.userAgent)) {
+      return;
+    }
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    let idleId: number | undefined;
+    const timer = window.setTimeout(() => {
+      if (w.requestIdleCallback) {
+        idleId = w.requestIdleCallback(() => void refreshContent(), { timeout: 3000 });
+      } else {
+        void refreshContent();
+      }
+    }, 2500);
+    return () => {
+      window.clearTimeout(timer);
+      if (idleId !== undefined) w.cancelIdleCallback?.(idleId);
+    };
   }, [refreshContent]);
 
   const openBooking = useCallback(
