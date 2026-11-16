@@ -9,6 +9,20 @@
       content="JS FITNESS INC — More than just a gym membership. 24/7 gym access, customized coaching, nutrition tracking, and real transformations in Calgary NE."
     />
     <meta name="theme-color" content="#050505" />
+    <script>
+      (function () {
+        try {
+          var t = matchMedia('(pointer: coarse)').matches;
+          var c = navigator.hardwareConcurrency || 4;
+          var m = navigator.deviceMemory || 4;
+          var r = matchMedia('(prefers-reduced-motion: reduce)').matches;
+          document.documentElement.dataset.perf =
+            r || c <= 2 || m <= 2 ? 'low' : t || c <= 4 || m <= 4 ? 'medium' : 'high';
+        } catch (e) {
+          document.documentElement.dataset.perf = 'high';
+        }
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
