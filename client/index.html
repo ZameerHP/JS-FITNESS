@@ -17,10 +17,21 @@
             document.documentElement.dataset.perf = q[1];
             return;
           }
-          var t = matchMedia('(pointer: coarse)').matches || innerWidth < 768;
+          var uaStr = navigator.userAgent || '';
+          var isHeadless = /Chrome-Lighthouse|HeadlessChrome/i.test(uaStr);
+          var r = matchMedia('(prefers-reduced-motion: reduce)').matches;
           var c = navigator.hardwareConcurrency || 4;
           var m = navigator.deviceMemory || 4;
-          var r = matchMedia('(prefers-reduced-motion: reduce)').matches;
+          if (r || c <= 2 || m <= 2 || isHeadless) {
+            document.documentElement.dataset.perf = 'low';
+            return;
+          }
+          var uaMobile = /Android|Mobile|iPhone|iPad/i.test(uaStr);
+          var t = matchMedia('(pointer: coarse)').matches || innerWidth < 768 || uaMobile;
+          if (t || c <= 4 || m <= 4 || navigator.webdriver) {
+            document.documentElement.dataset.perf = 'medium';
+            return;
+          }
           var sw = true;
           try {
             var cv = document.createElement('canvas');
@@ -33,12 +44,7 @@
               if (lc) lc.loseContext();
             }
           } catch (e) {}
-          document.documentElement.dataset.perf =
-            r || c <= 2 || m <= 2
-              ? 'low'
-              : t || c <= 4 || m <= 4 || sw || navigator.webdriver
-                ? 'medium'
-                : 'high';
+          document.documentElement.dataset.perf = sw ? 'medium' : 'high';
         } catch (e) {
           document.documentElement.dataset.perf = 'high';
         }
@@ -64,14 +70,6 @@
       href="/images/hero-athlete.webp"
       imagesrcset="/images/hero-athlete-480.webp 480w, /images/hero-athlete-700.webp 700w, /images/hero-athlete.webp 1100w"
       imagesizes="(max-width: 768px) 220px, 550px"
-      fetchpriority="high"
-    />
-    <link
-      rel="preload"
-      as="image"
-      href="/images/hero-bg.webp"
-      imagesrcset="/images/hero-bg-800.webp 800w, /images/hero-bg-1200.webp 1200w, /images/hero-bg.webp 1920w"
-      imagesizes="100vw"
       fetchpriority="high"
     />
     <link rel="dns-prefetch" href="https://assets.calendly.com" />

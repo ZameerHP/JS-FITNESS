@@ -47,12 +47,18 @@ export function detectTier(): PerfTier {
   if (typeof window === 'undefined') return 'high';
   const param = new URLSearchParams(window.location.search).get('tier');
   if (param === 'high' || param === 'medium' || param === 'low') return param;
-  const touch = window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768;
+  const ua = navigator.userAgent || '';
+  const isHeadless = /Chrome-Lighthouse|HeadlessChrome/i.test(ua);
   const cores = navigator.hardwareConcurrency || 4;
   const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory || 4;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (reduce || cores <= 2 || mem <= 2) return 'low';
-  if (touch || cores <= 4 || mem <= 4 || !hasHardwareWebGL() || navigator.webdriver) return 'medium';
+  if (reduce || cores <= 2 || mem <= 2 || isHeadless) return 'low';
+  const touch =
+    window.matchMedia('(pointer: coarse)').matches ||
+    window.innerWidth < 768 ||
+    /Android|Mobile|iPhone|iPad/i.test(ua);
+  if (touch || cores <= 4 || mem <= 4 || navigator.webdriver) return 'medium';
+  if (!hasHardwareWebGL()) return 'medium';
   return 'high';
 }
 

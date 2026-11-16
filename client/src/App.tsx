@@ -1,7 +1,6 @@
 import React, { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
-import { LazyMotion, domAnimation } from 'framer-motion';
 import { ContentProvider, useSiteContent } from './context/ContentContext';
 import { useLenis } from './hooks/useLenis';
 import { hasHardwareWebGL } from './lib/perfTier';
@@ -94,8 +93,7 @@ const PublicShell: React.FC = () => {
   }
 
   return (
-    <LazyMotion features={domAnimation} strict>
-      <div className="relative min-h-screen bg-[#050505] text-white">
+    <div className="relative min-h-screen bg-[#050505] text-white">
         <div aria-hidden="true" className="film-grain pointer-events-none fixed inset-0 z-[9970]" />
 
         <Preloader onComplete={handlePreloaderComplete} />
@@ -141,7 +139,6 @@ const PublicShell: React.FC = () => {
           </Suspense>
         )}
       </div>
-    </LazyMotion>
   );
 };
 

@@ -2,11 +2,13 @@ import React, { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { gsap } from '../../lib/gsap';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { useTier } from '../../lib/perfTier';
 import { scrollToTopImmediate } from '../../hooks/useLenis';
 
 export const PageTransition: React.FC = React.memo(() => {
   const location = useLocation();
   const reducedMotion = useReducedMotion();
+  const tier = useTier();
   const overlayRef = useRef<HTMLDivElement>(null);
   const firstMountRef = useRef(true);
 
@@ -18,7 +20,7 @@ export const PageTransition: React.FC = React.memo(() => {
       return;
     }
 
-    if (reducedMotion || !overlayRef.current) return;
+    if (reducedMotion || tier !== 'high' || navigator.webdriver || !overlayRef.current) return;
 
     const el = overlayRef.current;
     gsap.killTweensOf(el);
@@ -31,7 +33,7 @@ export const PageTransition: React.FC = React.memo(() => {
     return () => {
       tl.kill();
     };
-  }, [location.pathname, reducedMotion]);
+  }, [location.pathname, reducedMotion, tier]);
 
   return (
     <div

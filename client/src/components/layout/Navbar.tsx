@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { m, AnimatePresence } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
 import { NAV_LINKS } from '../../config/siteConfig';
 import { useSiteContent } from '../../context/ContentContext';
@@ -81,11 +80,7 @@ export const Navbar: React.FC<NavbarProps> = React.memo(({ onPrefetchRoute }) =>
                 >
                   {item.label}
                   {isActive && (
-                    <m.span
-                      layoutId="nav-underline"
-                      transition={{ type: 'spring', stiffness: 420, damping: 32 }}
-                      className="absolute left-0 right-0 -bottom-0.5 h-[2px] rounded-full bg-[#B6F500] shadow-[0_0_8px_#B6F500]"
-                    />
+                    <span className="absolute left-0 right-0 -bottom-0.5 h-[2px] rounded-full bg-[#B6F500] shadow-[0_0_8px_#B6F500]" />
                   )}
                 </Link>
               );
@@ -111,56 +106,43 @@ export const Navbar: React.FC<NavbarProps> = React.memo(({ onPrefetchRoute }) =>
         </div>
       </header>
 
-      <AnimatePresence>
-        {mobileOpen && (
-          <m.div
-            initial={{ x: '-100%' }}
-            animate={{ x: '0%' }}
-            exit={{ x: '100%' }}
-            transition={{ duration: 0.4, ease: [0.76, 0, 0.24, 1] }}
-            className="fixed inset-0 z-40 bg-[#050505] flex flex-col justify-between pt-24 pb-10 px-6 min-[820px]:hidden overflow-y-auto"
-          >
-            <div className="flex flex-col gap-3">
-              {NAV_LINKS.map((item, idx) => {
-                const isActive = location.pathname === item.path;
-                return (
-                  <m.div
-                    key={item.path}
-                    initial={{ opacity: 0, x: -24 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.08 + idx * 0.045, duration: 0.3 }}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-40 bg-[#050505] flex flex-col justify-between pt-24 pb-10 px-6 min-[820px]:hidden overflow-y-auto transition-opacity duration-200">
+          <div className="flex flex-col gap-3">
+            {NAV_LINKS.map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <div key={item.path}>
+                  <Link
+                    to={item.path}
+                    onClick={() => setMobileOpen(false)}
+                    className={`block font-display italic font-black text-4xl uppercase tracking-tight py-1.5 ${
+                      isActive ? 'text-[#B6F500]' : 'text-white hover:text-[#B6F500]'
+                    }`}
                   >
-                    <Link
-                      to={item.path}
-                      onClick={() => setMobileOpen(false)}
-                      className={`block font-display italic font-black text-4xl uppercase tracking-tight py-1.5 ${
-                        isActive ? 'text-[#B6F500]' : 'text-white hover:text-[#B6F500]'
-                      }`}
-                    >
-                      {item.label}
-                    </Link>
-                  </m.div>
-                );
-              })}
-            </div>
+                    {item.label}
+                  </Link>
+                </div>
+              );
+            })}
+          </div>
 
-            <div className="pt-8 border-t border-white/10 flex flex-col gap-3">
-              <Button variant="primary" onClick={() => { setMobileOpen(false); openBooking('tour'); }}>
-                BOOK YOUR FREE GYM TOUR
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setMobileOpen(false);
-                  openBooking('assessment');
-                }}
-              >
-                STRATEGY ASSESSMENT — $99.99 CAD
-              </Button>
-            </div>
-          </m.div>
-        )}
-      </AnimatePresence>
+          <div className="pt-8 border-t border-white/10 flex flex-col gap-3">
+            <Button variant="primary" onClick={() => { setMobileOpen(false); openBooking('tour'); }}>
+              BOOK YOUR FREE GYM TOUR
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setMobileOpen(false);
+                openBooking('assessment');
+              }}
+            >
+              STRATEGY ASSESSMENT — $99.99 CAD
+            </Button>
+          </div>
+        </div>
+      )}
     </>
   );
 });

@@ -37,7 +37,7 @@ html = html.replace(
 // Inject missing modulepreload links for core chunks so browser parses in parallel
 if (fs.existsSync(assetsDir)) {
   const files = fs.readdirSync(assetsDir);
-  const wantPrefixes = ['react-', 'gsap-', 'motion-'];
+  const wantPrefixes = ['react-', 'gsap-'];
   const tagsToAdd = [];
 
   for (const prefix of wantPrefixes) {

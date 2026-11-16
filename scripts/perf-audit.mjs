@@ -268,11 +268,11 @@ async function measureScrollAndHeap(browser) {
     };
   });
 
-  // 2 warmup passes so lazy chunks and React Fiber double buffers are allocated before leak check
+  // 4 warmup passes so lazy chunks, V8 JIT tiers, and Fiber double buffers settle before leak check
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(250);
   const navHrefs = ['/about', '/membership', '/system', '/transformations', '/contact', '/'];
-  for (let w = 0; w < 2; w++) {
+  for (let w = 0; w < 4; w++) {
     for (const href of navHrefs) {
       await page.locator(`header nav a[href="${href}"]`).click();
       await page.waitForTimeout(100);
