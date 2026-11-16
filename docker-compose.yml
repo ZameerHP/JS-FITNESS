@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: jsfitness
+      POSTGRES_USER: jsfitness
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_this_pg_password}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jsfitness"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      CLIENT_URL: https://jsfitness.ca,https://www.jsfitness.ca
+      COOKIE_SECURE: "true"
+      DATABASE_URL: postgresql://jsfitness:${POSTGRES_PASSWORD:-change_this_pg_password}@postgres:5432/jsfitness?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@jsfitness.ca}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      CONTACT_RECIPIENT_EMAIL: coachingbyjatinder@gmail.com
+    volumes:
+      - uploads_data:/app/server/uploads
+
+volumes:
+  pg_data:
+  uploads_data:
