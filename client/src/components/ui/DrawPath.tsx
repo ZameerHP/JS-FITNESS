@@ -45,7 +45,7 @@ export const DrawPath: React.FC<DrawPathProps> = ({
           trigger: path,
           start: 'top 90%',
           end: scrub ? 'bottom 45%' : undefined,
-          scrub: scrub ? 1 : false,
+          scrub: scrub ? true : false,
           once: !scrub,
         },
       });

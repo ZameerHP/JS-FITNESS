@@ -29,7 +29,7 @@ export const Footer: React.FC = () => {
           trigger: footerRef.current,
           start: 'top bottom',
           end: 'bottom bottom',
-          scrub: 1,
+          scrub: true,
         },
       });
     }, footerRef);

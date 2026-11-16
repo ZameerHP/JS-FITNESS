@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { scrollToTopImmediate } from '../../hooks/useLenis';
 
 export const PageTransition: React.FC = () => {
   const location = useLocation();
@@ -10,7 +11,7 @@ export const PageTransition: React.FC = () => {
   const [transitioning, setTransitioning] = React.useState(false);
 
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    scrollToTopImmediate();
 
     if (firstMountRef.current) {
       firstMountRef.current = false;
