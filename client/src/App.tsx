@@ -26,10 +26,13 @@ import { Terms } from './pages/Terms';
 import { NotFound } from './pages/NotFound';
 
 const AdminLayout = lazy(() => import('./admin/AdminLayout'));
+const PerfHud = lazy(() => import('./components/ui/PerfHud'));
 
 const PublicShell: React.FC = () => {
   const location = useLocation();
   const isAdmin = location.pathname.startsWith('/admin');
+  const showPerfHud =
+    typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('perf') === '1';
   const [preloaderDone, setPreloaderDone] = useState(false);
 
   useLenis();
@@ -83,6 +86,11 @@ const PublicShell: React.FC = () => {
       <WhatsAppFloat />
       <CalendlyModal />
       <VideoModal />
+      {showPerfHud && (
+        <Suspense fallback={null}>
+          <PerfHud />
+        </Suspense>
+      )}
     </div>
   );
 };

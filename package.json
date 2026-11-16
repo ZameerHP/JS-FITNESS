@@ -1,0 +1,14 @@
+{
+  "name": "js-fitness-monorepo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "perf:baseline": "node scripts/perf-audit.mjs --mode=baseline",
+    "perf:verify": "node scripts/perf-audit.mjs --mode=after",
+    "test:smoothness": "node scripts/verify-smoothness.mjs"
+  },
+  "devDependencies": {
+    "lighthouse": "^12.2.1",
+    "playwright-core": "^1.48.2"
+  }
+}
