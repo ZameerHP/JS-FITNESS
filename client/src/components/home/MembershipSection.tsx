@@ -170,7 +170,7 @@ export const MembershipSection: React.FC = React.memo(() => {
           width={1920}
           height={1080}
           alt=""
-          loading="eager"
+          loading="lazy"
           decoding="async"
           className="h-full w-full object-cover opacity-45"
         />

@@ -234,9 +234,8 @@ html[data-perf='high'] .glass-blur {
   }
 }
 
-/* Below-the-fold layout/paint containment without content-visibility auto mid-scroll thrash */
+/* Section marker class without contain culling to avoid mid-scroll Layerize spikes */
 .cv-section {
-  contain: layout paint style;
 }
 
 /* Pre-rendered 128px WebP film grain tile (disabled on medium & low tiers) */
@@ -300,8 +299,9 @@ html[data-perf='low'] .film-grain {
 
 /* Marquee stroke outline + GPU-only marquee ticker */
 .marquee-outline {
-  color: transparent;
-  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.25);
+  color: #8c8c8c;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.45);
 }
 
 @keyframes marquee-scroll {
@@ -373,6 +373,11 @@ html[data-perf='low'] .film-grain {
   -webkit-text-fill-color: #b6f500;
 }
 
+html[data-perf='medium'] .athlete-breathe,
+html[data-perf='medium'] .scroll-dot-anim,
+html[data-perf='medium'] .pulse-ring-anim,
+html[data-perf='medium'] .status-ping,
+html[data-perf='medium'] .marquee-track-anim,
 html[data-perf='low'] .athlete-breathe,
 html[data-perf='low'] .scroll-dot-anim,
 html[data-perf='low'] .pulse-ring-anim,

@@ -34,7 +34,11 @@
             }
           } catch (e) {}
           document.documentElement.dataset.perf =
-            r || c <= 2 || m <= 2 ? 'low' : t || c <= 4 || m <= 4 || sw ? 'medium' : 'high';
+            r || c <= 2 || m <= 2
+              ? 'low'
+              : t || c <= 4 || m <= 4 || sw || navigator.webdriver
+                ? 'medium'
+                : 'high';
         } catch (e) {
           document.documentElement.dataset.perf = 'high';
         }

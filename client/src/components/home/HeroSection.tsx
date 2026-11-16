@@ -119,28 +119,38 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
 
     // Single global pointer subscription via GSAP quickTo (zero extra RAF, zero React re-renders)
     useEffect(() => {
-      if (reducedMotion || isMobile || tier !== 'high' || !heroVisible) return;
+      if (reducedMotion || isMobile || tier !== 'high' || navigator.webdriver || !heroVisible)
+        return;
 
-      const aX = athleteWrapRef.current
-        ? gsap.quickTo(athleteWrapRef.current, 'x', { duration: 0.55, ease: 'power3.out' })
-        : null;
-      const aY = athleteWrapRef.current
-        ? gsap.quickTo(athleteWrapRef.current, 'y', { duration: 0.55, ease: 'power3.out' })
-        : null;
-      const tX = triangleWrapRef.current
-        ? gsap.quickTo(triangleWrapRef.current, 'x', { duration: 0.55, ease: 'power3.out' })
-        : null;
-      const tY = triangleWrapRef.current
-        ? gsap.quickTo(triangleWrapRef.current, 'y', { duration: 0.55, ease: 'power3.out' })
-        : null;
-      const wX = watermarkRef.current
-        ? gsap.quickTo(watermarkRef.current, 'x', { duration: 0.55, ease: 'power3.out' })
-        : null;
-      const wY = watermarkRef.current
-        ? gsap.quickTo(watermarkRef.current, 'y', { duration: 0.55, ease: 'power3.out' })
-        : null;
+      let aX: gsap.QuickToFunc | null = null;
+      let aY: gsap.QuickToFunc | null = null;
+      let tX: gsap.QuickToFunc | null = null;
+      let tY: gsap.QuickToFunc | null = null;
+      let wX: gsap.QuickToFunc | null = null;
+      let wY: gsap.QuickToFunc | null = null;
 
-      return subscribePointerTick((ptr) => {
+      const ctx = gsap.context(() => {
+        aX = athleteWrapRef.current
+          ? gsap.quickTo(athleteWrapRef.current, 'x', { duration: 0.55, ease: 'power3.out' })
+          : null;
+        aY = athleteWrapRef.current
+          ? gsap.quickTo(athleteWrapRef.current, 'y', { duration: 0.55, ease: 'power3.out' })
+          : null;
+        tX = triangleWrapRef.current
+          ? gsap.quickTo(triangleWrapRef.current, 'x', { duration: 0.55, ease: 'power3.out' })
+          : null;
+        tY = triangleWrapRef.current
+          ? gsap.quickTo(triangleWrapRef.current, 'y', { duration: 0.55, ease: 'power3.out' })
+          : null;
+        wX = watermarkRef.current
+          ? gsap.quickTo(watermarkRef.current, 'x', { duration: 0.55, ease: 'power3.out' })
+          : null;
+        wY = watermarkRef.current
+          ? gsap.quickTo(watermarkRef.current, 'y', { duration: 0.55, ease: 'power3.out' })
+          : null;
+      }, sectionRef);
+
+      const unsub = subscribePointerTick((ptr) => {
         pointerRef.current.normX = ptr.normX;
         pointerRef.current.normY = ptr.normY;
         if (!ptr.dirty) return;
@@ -151,6 +161,11 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
         wX?.(ptr.normX * -8);
         wY?.(ptr.normY * -5);
       });
+
+      return () => {
+        unsub();
+        ctx.revert();
+      };
     }, [reducedMotion, isMobile, tier, heroVisible]);
 
     // Entrance & scroll timelines

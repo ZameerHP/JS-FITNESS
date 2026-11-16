@@ -19,7 +19,7 @@ export const ImageSlot: React.FC<ImageSlotProps> = ({
   imgClassName = 'object-cover w-full h-full',
   vignette = true,
   priority = false,
-  lazy = false,
+  lazy = true,
   label,
 }) => {
   const [failed, setFailed] = useState(false);

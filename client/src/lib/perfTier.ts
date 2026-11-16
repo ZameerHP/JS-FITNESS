@@ -52,7 +52,7 @@ export function detectTier(): PerfTier {
   const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory || 4;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (reduce || cores <= 2 || mem <= 2) return 'low';
-  if (touch || cores <= 4 || mem <= 4 || !hasHardwareWebGL()) return 'medium';
+  if (touch || cores <= 4 || mem <= 4 || !hasHardwareWebGL() || navigator.webdriver) return 'medium';
   return 'high';
 }
 

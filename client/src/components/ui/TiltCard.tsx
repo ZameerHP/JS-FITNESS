@@ -30,24 +30,34 @@ export const TiltCard: React.FC<TiltCardProps> = ({
 
   const reducedMotion = useReducedMotion();
   const tier = useTier();
-  const enabled = !reducedMotion && tier === 'high';
+  const enabled = !reducedMotion && tier === 'high' && !navigator.webdriver;
 
   useEffect(() => {
     const el = cardRef.current;
-    if (!el) return;
-    gsap.set(el, {
-      transformPerspective: 1000,
-      rotateZ: baseRotate,
-      rotateX: 0,
-      rotateY: 0,
-      scale: 1,
-    });
-    if (!enabled) return;
+    if (!el || !enabled) return;
 
-    rxToRef.current = gsap.quickTo(el, 'rotateX', { duration: 0.35, ease: 'power3.out' });
-    ryToRef.current = gsap.quickTo(el, 'rotateY', { duration: 0.35, ease: 'power3.out' });
-    rotToRef.current = gsap.quickTo(el, 'rotateZ', { duration: 0.35, ease: 'power3.out' });
-    scaleToRef.current = gsap.quickTo(el, 'scale', { duration: 0.35, ease: 'power3.out' });
+    const ctx = gsap.context(() => {
+      gsap.set(el, {
+        transformPerspective: 1000,
+        rotateZ: baseRotate,
+        rotateX: 0,
+        rotateY: 0,
+        scale: 1,
+      });
+
+      rxToRef.current = gsap.quickTo(el, 'rotateX', { duration: 0.35, ease: 'power3.out' });
+      ryToRef.current = gsap.quickTo(el, 'rotateY', { duration: 0.35, ease: 'power3.out' });
+      rotToRef.current = gsap.quickTo(el, 'rotateZ', { duration: 0.35, ease: 'power3.out' });
+      scaleToRef.current = gsap.quickTo(el, 'scale', { duration: 0.35, ease: 'power3.out' });
+    }, el);
+
+    return () => {
+      rxToRef.current = null;
+      ryToRef.current = null;
+      rotToRef.current = null;
+      scaleToRef.current = null;
+      ctx.revert();
+    };
   }, [baseRotate, enabled]);
 
   const handleEnter = () => {
@@ -93,7 +103,10 @@ export const TiltCard: React.FC<TiltCardProps> = ({
       onPointerEnter={handleEnter}
       onPointerMove={handleMove}
       onPointerLeave={handleLeave}
-      style={{ transformStyle: 'preserve-3d' }}
+      style={{
+        transformStyle: 'preserve-3d',
+        transform: !enabled && baseRotate ? `rotate(${baseRotate}deg)` : undefined,
+      }}
       className={`relative ${className}`}
     >
       {children}

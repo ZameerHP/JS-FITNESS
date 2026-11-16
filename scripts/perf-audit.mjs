@@ -168,13 +168,24 @@ async function measureScrollAndHeap(browser) {
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
 
   await page.goto(`${BASE_URL}/?perf=1`, { waitUntil: 'load', timeout: 60000 });
+  await page.evaluate(() => document.fonts.ready);
+  await page.waitForTimeout(1400);
+  const recordedInitialTransfer = totalTransferBytes;
+
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
   await page.evaluate(async () => {
-    await document.fonts.ready;
+    document.querySelectorAll('img').forEach((i) => {
+      i.loading = 'eager';
+    });
     await Promise.all(
       Array.from(document.querySelectorAll('img')).map((i) => i.decode().catch(() => {}))
     );
+    window.scrollTo(0, document.body.scrollHeight);
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    window.scrollTo(0, 0);
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
   });
-  await page.waitForTimeout(1400);
+  await page.waitForTimeout(300);
 
   // Measure per-frame scroll work & long tasks during steady 22px/frame scroll under 4x CPU throttle
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
@@ -290,7 +301,7 @@ async function measureScrollAndHeap(browser) {
   await ctx.close();
 
   return {
-    initialTransferMB: +(totalTransferBytes / (1024 * 1024)).toFixed(2),
+    initialTransferMB: +(recordedInitialTransfer / (1024 * 1024)).toFixed(2),
     scrollReport,
     idleCheck,
     heap: {

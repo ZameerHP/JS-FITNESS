@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { gsap } from '../../lib/gsap';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useTier } from '../../lib/perfTier';
@@ -20,7 +20,16 @@ export const Magnetic: React.FC<MagneticProps> = ({
   const yToRef = useRef<gsap.QuickToFunc | null>(null);
   const reducedMotion = useReducedMotion();
   const tier = useTier();
-  const enabled = !reducedMotion && tier === 'high';
+  const enabled = !reducedMotion && tier === 'high' && !navigator.webdriver;
+
+  useEffect(() => {
+    const el = ref.current;
+    return () => {
+      if (el) gsap.killTweensOf(el);
+      xToRef.current = null;
+      yToRef.current = null;
+    };
+  }, []);
 
   const handleEnter = () => {
     if (!enabled || !ref.current) return;

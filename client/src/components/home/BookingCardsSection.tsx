@@ -180,7 +180,7 @@ export const BookingCardsSection: React.FC<BookingCardsSectionProps> = React.mem
                   width={720}
                   height={333}
                   alt="Black hex dumbbells"
-                  loading="eager"
+                  loading="lazy"
                   decoding="async"
                   className="pointer-events-none hidden sm:block absolute -right-4 -bottom-6 w-52 lg:w-60 h-auto object-contain"
                 />
@@ -246,7 +246,7 @@ export const BookingCardsSection: React.FC<BookingCardsSectionProps> = React.mem
                   width={520}
                   height={468}
                   alt="JS FITNESS shaker bottle"
-                  loading="eager"
+                  loading="lazy"
                   decoding="async"
                   className="pointer-events-none hidden sm:block absolute right-4 -bottom-4 w-32 lg:w-36 h-auto object-contain"
                 />

@@ -62,7 +62,7 @@ export const Navbar: React.FC<NavbarProps> = React.memo(({ onPrefetchRoute }) =>
         className="fixed top-0 left-0 right-0 z-50 h-[72px] translate-y-0 bg-transparent border-b border-transparent transition-[transform,background-color,border-color] duration-300"
       >
         <div className="mx-auto flex h-full max-w-[1280px] items-center justify-between px-5 lg:px-8">
-          <Link to="/" aria-label="JS FITNESS INC" className="shrink-0">
+          <Link to="/" className="shrink-0">
             <JSLogo size="sm" />
           </Link>
 

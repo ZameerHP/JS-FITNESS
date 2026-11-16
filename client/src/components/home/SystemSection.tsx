@@ -50,12 +50,6 @@ export const SystemSection: React.FC = React.memo(() => {
     let ctx: gsap.Context | null = null;
     let cancelTask: (() => void) | null = null;
 
-    if (phoneRef.current) {
-      gsap.set(phoneRef.current, { transformPerspective: 1100, rotateY: -6 });
-      rxToRef.current = gsap.quickTo(phoneRef.current, 'rotateX', { duration: 0.4, ease: 'power3.out' });
-      ryToRef.current = gsap.quickTo(phoneRef.current, 'rotateY', { duration: 0.4, ease: 'power3.out' });
-    }
-
     const bars = Array.from(el.querySelectorAll<HTMLElement>('.mockup-bar'));
     const syncLoops = () => {
       const shouldRun = inView && !document.hidden;
@@ -84,6 +78,18 @@ export const SystemSection: React.FC = React.memo(() => {
     const cancelInteract = onFirstUserInteraction(() => {
       cancelTask = scheduleChunkedTask(() => {
         ctx = gsap.context(() => {
+          if (phoneRef.current) {
+            gsap.set(phoneRef.current, { transformPerspective: 1100, rotateY: -6 });
+            rxToRef.current = gsap.quickTo(phoneRef.current, 'rotateX', {
+              duration: 0.4,
+              ease: 'power3.out',
+            });
+            ryToRef.current = gsap.quickTo(phoneRef.current, 'rotateY', {
+              duration: 0.4,
+              ease: 'power3.out',
+            });
+          }
+
           floatTween = gsap.to(phoneRef.current, {
             y: -10,
             duration: 2.5,
@@ -209,6 +215,8 @@ export const SystemSection: React.FC = React.memo(() => {
       io.disconnect();
       document.removeEventListener('visibilitychange', syncLoops);
       if (jitterInterval) clearInterval(jitterInterval);
+      rxToRef.current = null;
+      ryToRef.current = null;
       ctx?.revert();
     };
   }, [reducedMotion, tier]);
@@ -388,7 +396,7 @@ export const SystemSection: React.FC = React.memo(() => {
               width={900}
               height={1200}
               alt="Female fitness athlete using JS FITNESS SYSTEM"
-              loading="eager"
+              loading="lazy"
               decoding="async"
               className="pointer-events-none relative -ml-14 sm:-ml-16 z-20 h-[370px] sm:h-[460px] w-auto object-contain grayscale contrast-125"
             />

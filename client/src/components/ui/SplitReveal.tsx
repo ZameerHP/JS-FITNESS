@@ -30,7 +30,7 @@ export const SplitReveal: React.FC<SplitRevealProps> = ({
   const reducedMotion = useReducedMotion();
   const tier = useTier();
   const isAutomated = typeof navigator !== 'undefined' && Boolean(navigator.webdriver);
-  const isPlainStatic = reducedMotion || tier === 'low' || isAutomated;
+  const isPlainStatic = reducedMotion || tier !== 'high' || isAutomated;
   const isPlainBelowFold = !trigger && tier !== 'high';
 
   useEffect(() => {

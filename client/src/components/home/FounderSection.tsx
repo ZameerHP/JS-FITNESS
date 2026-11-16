@@ -123,7 +123,7 @@ export const FounderSection: React.FC = React.memo(() => {
                 width={1000}
                 height={1333}
                 alt="Jatinder Singh — Founder & Certified Personal Trainer at JS FITNESS INC"
-                loading="eager"
+                loading="lazy"
                 decoding="async"
                 className="h-full w-full object-cover object-top"
               />

@@ -76,7 +76,7 @@ export const Footer: React.FC = React.memo(() => {
         height={559}
         alt=""
         aria-hidden="true"
-        loading="eager"
+        loading="lazy"
         decoding="async"
         className="pointer-events-none hidden md:block absolute -right-24 top-1/2 -translate-y-1/2 w-56 h-56 object-contain opacity-65 select-none"
       />
@@ -84,7 +84,7 @@ export const Footer: React.FC = React.memo(() => {
       <div className="relative z-10 mx-auto max-w-[1280px] px-5 lg:px-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-0 pb-10">
           <div className="lg:pr-8 flex flex-col justify-center">
-            <Link to="/" aria-label="JS FITNESS INC">
+            <Link to="/">
               <JSLogo size="md" />
             </Link>
             <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.28em] text-[#8C8C8C]">

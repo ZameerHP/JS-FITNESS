@@ -38,11 +38,26 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        manualChunks: {
-          react: ['react', 'react-dom', 'react-router-dom'],
-          gsap: ['gsap'],
-          motion: ['framer-motion'],
-          three: ['three', '@react-three/fiber', '@react-three/drei'],
+        manualChunks(id) {
+          if (id.includes('preload-helper') || id.includes('commonjsHelpers')) {
+            return 'react';
+          }
+          if (
+            /node_modules[\\/](?:react|react-dom|scheduler|react-router|react-router-dom|@remix-run)[\\/]/.test(
+              id
+            )
+          ) {
+            return 'react';
+          }
+          if (/node_modules[\\/]gsap[\\/]/.test(id)) {
+            return 'gsap';
+          }
+          if (/node_modules[\\/]framer-motion[\\/]/.test(id)) {
+            return 'motion';
+          }
+          if (/node_modules[\\/](?:three|@react-three)[\\/]/.test(id)) {
+            return 'three';
+          }
         },
       },
     },

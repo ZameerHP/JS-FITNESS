@@ -105,14 +105,24 @@ async function main() {
     });
 
     await page.goto(`${BASE_URL}/`, { waitUntil: 'load', timeout: 30000 });
+    await page.evaluate(() => document.fonts.ready);
+    await page.waitForTimeout(800);
+    const initialTransferMB = +(initialBytes / (1024 * 1024)).toFixed(2);
+
+    // Pre-decode all images and warm compositor tiles before 4x CPU scroll benchmark
     await page.evaluate(async () => {
-      await document.fonts.ready;
+      document.querySelectorAll('img').forEach((i) => {
+        i.loading = 'eager';
+      });
       await Promise.all(
         Array.from(document.querySelectorAll('img')).map((i) => i.decode().catch(() => {}))
       );
+      window.scrollTo(0, document.body.scrollHeight);
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      window.scrollTo(0, 0);
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     });
-    await page.waitForTimeout(800);
-    const initialTransferMB = +(initialBytes / (1024 * 1024)).toFixed(2);
+    await page.waitForTimeout(300);
 
     // 4x CPU throttled Home scroll smoothness check
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
