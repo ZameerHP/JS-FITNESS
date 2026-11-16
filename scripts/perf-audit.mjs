@@ -232,7 +232,7 @@ async function measureScrollAndHeap(browser) {
   await page.waitForTimeout(200);
   await page.locator('header nav a[href="/membership"]').click();
   await page.waitForTimeout(300);
-  await page.locator('header a[href="/"]').click();
+  await page.locator('header nav a[href="/"]').click();
   await page.waitForTimeout(350);
   const hudText = await page.locator('aside[aria-label="Performance Telemetry Overlay"]').innerText().catch(() => '');
 
@@ -263,11 +263,7 @@ async function measureScrollAndHeap(browser) {
   const navHrefs = ['/about', '/membership', '/system', '/transformations', '/contact', '/'];
   for (let w = 0; w < 2; w++) {
     for (const href of navHrefs) {
-      if (href === '/') {
-        await page.locator('header a[href="/"]').click();
-      } else {
-        await page.locator(`header nav a[href="${href}"]`).click();
-      }
+      await page.locator(`header nav a[href="${href}"]`).click();
       await page.waitForTimeout(100);
     }
   }
@@ -281,11 +277,7 @@ async function measureScrollAndHeap(browser) {
 
   for (let loop = 0; loop < 10; loop++) {
     for (const href of navHrefs) {
-      if (href === '/') {
-        await page.locator('header a[href="/"]').click();
-      } else {
-        await page.locator(`header nav a[href="${href}"]`).click();
-      }
+      await page.locator(`header nav a[href="${href}"]`).click();
       await page.waitForTimeout(80);
     }
   }

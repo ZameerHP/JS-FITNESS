@@ -174,8 +174,7 @@ async function main() {
     const routes = ['/about', '/membership', '/system', '/transformations', '/contact', '/'];
     for (let w = 0; w < 2; w++) {
       for (const href of routes) {
-        if (href === '/') await page.locator('header a[href="/"]').click();
-        else await page.locator(`header nav a[href="${href}"]`).click();
+        await page.locator(`header nav a[href="${href}"]`).click();
         await page.waitForTimeout(100);
       }
     }
@@ -190,8 +189,7 @@ async function main() {
 
     for (let i = 0; i < 10; i++) {
       for (const href of routes) {
-        if (href === '/') await page.locator('header a[href="/"]').click();
-        else await page.locator(`header nav a[href="${href}"]`).click();
+        await page.locator(`header nav a[href="${href}"]`).click();
         await page.waitForTimeout(70);
       }
     }
