@@ -87,26 +87,74 @@ export const DEFAULT_SETTINGS: Record<string, unknown> = {
 export async function buildPublicContent() {
   const [settingsRows, transformations, testimonials, gallery, videos, certifications] =
     await Promise.all([
-      prisma.siteSetting.findMany(),
+      prisma.siteSetting.findMany({ select: { key: true, value: true } }),
       prisma.transformation.findMany({
         where: { visible: true },
         orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
+        select: {
+          id: true,
+          name: true,
+          timeframe: true,
+          category: true,
+          story: true,
+          beforeImage: true,
+          afterImage: true,
+          isDemo: true,
+          visible: true,
+          order: true,
+        },
       }),
       prisma.testimonial.findMany({
         where: { visible: true },
         orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
+        select: {
+          id: true,
+          name: true,
+          role: true,
+          quote: true,
+          rating: true,
+          avatarUrl: true,
+          visible: true,
+          order: true,
+        },
       }),
       prisma.galleryItem.findMany({
         where: { visible: true },
         orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
+        select: {
+          id: true,
+          title: true,
+          imageUrl: true,
+          category: true,
+          visible: true,
+          order: true,
+        },
       }),
       prisma.videoItem.findMany({
         where: { visible: true },
         orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
+        select: {
+          id: true,
+          title: true,
+          url: true,
+          thumbnailUrl: true,
+          isWalkthrough: true,
+          visible: true,
+          order: true,
+        },
       }),
       prisma.certification.findMany({
         where: { visible: true },
         orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
+        select: {
+          id: true,
+          title: true,
+          issuer: true,
+          year: true,
+          imageUrl: true,
+          visible: true,
+          order: true,
+        },
       }),
     ]);
 
@@ -132,14 +180,14 @@ export async function buildPublicContent() {
 export async function getPublicContent(_req: Request, res: Response): Promise<void> {
   try {
     if (contentCache && Date.now() - contentCache.timestamp < CACHE_TTL_MS) {
-      res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+      res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=600');
       res.json(contentCache.payload);
       return;
     }
 
     const payload = await buildPublicContent();
     contentCache = { payload, timestamp: Date.now() };
-    res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+    res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=600');
     res.json(payload);
   } catch (error) {
     console.error('Error building public content:', error);

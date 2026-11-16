@@ -1,4 +1,5 @@
 import express from 'express';
+import compression from 'compression';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
@@ -14,6 +15,7 @@ import adminRoutes from './routes/admin.js';
 const app = express();
 
 app.set('trust proxy', 1);
+app.use(compression());
 
 app.use(
   helmet({
@@ -50,14 +52,21 @@ app.use('/api/contact', contactRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 
-// In production, serve compiled client bundle
+// In production, serve compiled client bundle with immutable hashed assets & short HTML cache
 const publicClientDir = path.resolve(process.cwd(), '../client/dist');
 if (env.isProd && fs.existsSync(publicClientDir)) {
-  app.use(express.static(publicClientDir, { maxAge: '7d' }));
+  app.use(
+    '/assets',
+    express.static(path.join(publicClientDir, 'assets'), { maxAge: '1y', immutable: true })
+  );
+  app.use('/fonts', express.static(path.join(publicClientDir, 'fonts'), { maxAge: '1y', immutable: true }));
+  app.use('/images', express.static(path.join(publicClientDir, 'images'), { maxAge: '30d' }));
+  app.use(express.static(publicClientDir, { maxAge: '5m', etag: true }));
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
       return next();
     }
+    res.setHeader('Cache-Control', 'public, max-age=300');
     res.sendFile(path.join(publicClientDir, 'index.html'));
   });
 }

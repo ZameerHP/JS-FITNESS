@@ -1,91 +1,97 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
+import { gsap } from '../../lib/gsap';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { useTier } from '../../lib/perfTier';
+import { subscribePointerTick } from '../../lib/pointer';
 
-export const CustomCursor: React.FC = () => {
+export const CustomCursor: React.FC = React.memo(() => {
   const dotRef = useRef<HTMLDivElement>(null);
   const ringRef = useRef<HTMLDivElement>(null);
+  const labelRef = useRef<HTMLSpanElement>(null);
   const reducedMotion = useReducedMotion();
-  const [enabled, setEnabled] = useState(false);
-  const [mode, setMode] = useState<'default' | 'pointer' | 'drag' | 'play'>('default');
+  const tier = useTier();
+
+  const isCoarse =
+    typeof window !== 'undefined' &&
+    (window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 1024);
+
+  const enabled = !reducedMotion && tier === 'high' && !isCoarse;
 
   useEffect(() => {
-    if (reducedMotion) return;
-    if (typeof window === 'undefined') return;
-    const isFine = window.matchMedia('(pointer: fine)').matches && window.innerWidth >= 1024;
-    if (!isFine) return;
-    setEnabled(true);
+    if (!enabled || !dotRef.current || !ringRef.current || !labelRef.current) return;
 
-    let mouseX = -100;
-    let mouseY = -100;
+    const dot = dotRef.current;
+    const ring = ringRef.current;
+    const label = labelRef.current;
+
+    const setDotX = gsap.quickSetter(dot, 'x', 'px');
+    const setDotY = gsap.quickSetter(dot, 'y', 'px');
+    const setRingX = gsap.quickSetter(ring, 'x', 'px');
+    const setRingY = gsap.quickSetter(ring, 'y', 'px');
+
     let ringX = -100;
     let ringY = -100;
-    let rafId = 0;
+    let lastMode: 'default' | 'pointer' | 'drag' | 'play' = 'default';
 
-    const onMove = (e: MouseEvent) => {
-      mouseX = e.clientX;
-      mouseY = e.clientY;
-      if (dotRef.current) {
-        dotRef.current.style.transform = `translate3d(${mouseX}px, ${mouseY}px, 0)`;
+    return subscribePointerTick((ptr) => {
+      if (ptr.x < -50) return;
+
+      if (ptr.dirty) {
+        setDotX(ptr.x);
+        setDotY(ptr.y);
+
+        const el = ptr.target as HTMLElement | null;
+        let nextMode: 'default' | 'pointer' | 'drag' | 'play' = 'default';
+        const cursorZone = el?.closest?.('[data-cursor]')?.getAttribute('data-cursor');
+        if (cursorZone === 'drag') nextMode = 'drag';
+        else if (cursorZone === 'play') nextMode = 'play';
+        else if (el?.closest?.('a, button, [role="button"], input, select, textarea')) {
+          nextMode = 'pointer';
+        }
+
+        if (nextMode !== lastMode) {
+          lastMode = nextMode;
+          const isExpanded = nextMode !== 'default';
+          dot.style.opacity = nextMode === 'drag' || nextMode === 'play' ? '0' : '1';
+          ring.style.transform = `translate3d(${ringX}px, ${ringY}px, 0) scale(${
+            isExpanded ? 1.8 : 1
+          })`;
+          ring.style.backgroundColor = isExpanded ? 'rgba(182, 245, 0, 0.2)' : 'transparent';
+          ring.style.borderColor = isExpanded ? '#B6F500' : 'rgba(182, 245, 0, 0.7)';
+          label.textContent = nextMode === 'drag' ? 'DRAG' : nextMode === 'play' ? 'PLAY' : '';
+        }
       }
 
-      const target = e.target as HTMLElement | null;
-      const cursorZone = target?.closest('[data-cursor]')?.getAttribute('data-cursor');
-      if (cursorZone === 'drag') {
-        setMode('drag');
-      } else if (cursorZone === 'play') {
-        setMode('play');
-      } else if (target?.closest('a, button, [role="button"], input, select, textarea')) {
-        setMode('pointer');
-      } else {
-        setMode('default');
+      const dx = ptr.x - ringX;
+      const dy = ptr.y - ringY;
+      if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
+        ringX += dx * 0.15;
+        ringY += dy * 0.15;
+        setRingX(ringX);
+        setRingY(ringY);
       }
-    };
-
-    const tick = () => {
-      ringX += (mouseX - ringX) * 0.15;
-      ringY += (mouseY - ringY) * 0.15;
-      if (ringRef.current) {
-        ringRef.current.style.transform = `translate3d(${ringX}px, ${ringY}px, 0)`;
-      }
-      rafId = requestAnimationFrame(tick);
-    };
-
-    window.addEventListener('mousemove', onMove, { passive: true });
-    rafId = requestAnimationFrame(tick);
-
-    return () => {
-      window.removeEventListener('mousemove', onMove);
-      cancelAnimationFrame(rafId);
-    };
-  }, [reducedMotion]);
+    });
+  }, [enabled]);
 
   if (!enabled) return null;
 
-  const isExpanded = mode !== 'default';
-
   return (
     <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-[9999]">
-      {/* 8px dot */}
       <div
         ref={dotRef}
-        className="fixed top-0 left-0 -ml-1 -mt-1 h-2 w-2 rounded-full bg-[#B6F500] transition-opacity duration-200"
-        style={{ opacity: mode === 'drag' || mode === 'play' ? 0 : 1 }}
+        className="fixed top-0 left-0 -ml-1 -mt-1 h-2 w-2 rounded-full bg-[#B6F500]"
+        style={{ transform: 'translate3d(-100px, -100px, 0)' }}
       />
-      {/* 36px trailing ring */}
       <div
         ref={ringRef}
-        className={`fixed top-0 left-0 -ml-[18px] -mt-[18px] flex h-[36px] w-[36px] items-center justify-center rounded-full border transition-all duration-200 ${
-          isExpanded
-            ? 'scale-[1.8] border-[#B6F500] bg-[#B6F500]/20'
-            : 'scale-100 border-[#B6F500]/70 bg-transparent'
-        }`}
+        className="fixed top-0 left-0 -ml-[18px] -mt-[18px] flex h-[36px] w-[36px] items-center justify-center rounded-full border border-[#B6F500]/70 transition-[background-color,border-color] duration-150"
+        style={{ transform: 'translate3d(-100px, -100px, 0)' }}
       >
-        {(mode === 'drag' || mode === 'play') && (
-          <span className="text-[7px] font-black tracking-[0.14em] text-[#B6F500] uppercase">
-            {mode === 'drag' ? 'DRAG' : 'PLAY'}
-          </span>
-        )}
+        <span
+          ref={labelRef}
+          className="text-[7px] font-black tracking-[0.14em] text-[#B6F500] uppercase"
+        />
       </div>
     </div>
   );
-};
+});

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -33,6 +33,24 @@ export const Contact: React.FC = () => {
   const { config } = useSiteContent();
   const [submitted, setSubmitted] = useState(false);
   const [serverError, setServerError] = useState('');
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = mapContainerRef.current;
+    if (!el || mapLoaded) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setMapLoaded(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: '600px' }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [mapLoaded]);
 
   const params = new URLSearchParams(window.location.search);
   const preselected = params.get('interest');
@@ -50,6 +68,8 @@ export const Contact: React.FC = () => {
     formState: { errors, isSubmitting },
   } = useForm<ContactFormData>({
     resolver: zodResolver(contactFormSchema),
+    mode: 'onBlur',
+    reValidateMode: 'onBlur',
     defaultValues: {
       interest: defaultInterest,
     },
@@ -280,15 +300,32 @@ export const Contact: React.FC = () => {
                 </div>
               </div>
 
-              {/* Google Map Embed */}
-              <div className="overflow-hidden rounded-[24px] border border-[#B6F500]/30 bg-[#0B0B0C] h-64">
-                <iframe
-                  title="JS FITNESS INC Location Map"
-                  src={`https://maps.google.com/maps?q=${mapQuery}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
-                  className="h-full w-full grayscale invert contrast-125 opacity-85"
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
+              {/* Google Map Facade (loads iframe on demand or within 1 viewport) */}
+              <div
+                ref={mapContainerRef}
+                className="relative overflow-hidden rounded-[24px] border border-[#B6F500]/30 bg-[#0B0B0C] h-64"
+              >
+                {mapLoaded ? (
+                  <iframe
+                    title="JS FITNESS INC Location Map"
+                    src={`https://maps.google.com/maps?q=${mapQuery}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
+                    className="h-full w-full grayscale invert contrast-125 opacity-85"
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                ) : (
+                  <div className="flex h-full w-full flex-col items-center justify-center p-6 text-center bg-gradient-to-br from-[#0B0B0C] to-[#121610]">
+                    <MapPin className="w-8 h-8 text-[#B6F500] mb-2" />
+                    <div className="text-sm font-bold text-white">{config.contact.address}</div>
+                    <button
+                      type="button"
+                      onClick={() => setMapLoaded(true)}
+                      className="mt-4 rounded-full border border-[#B6F500] px-5 py-2 text-xs font-extrabold uppercase tracking-wider text-[#B6F500] hover:bg-[#B6F500] hover:text-black transition-colors"
+                    >
+                      Load Interactive Map
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

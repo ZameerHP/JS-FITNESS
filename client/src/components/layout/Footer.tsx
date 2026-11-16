@@ -4,6 +4,7 @@ import { MapPin, Phone, Mail, Instagram, Youtube, Facebook } from 'lucide-react'
 import { gsap } from '../../lib/gsap';
 import { useSiteContent } from '../../context/ContentContext';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { useTier } from '../../lib/perfTier';
 import { JSLogo } from '../ui/JSLogo';
 import { Magnetic } from '../ui/Magnetic';
 
@@ -13,17 +14,18 @@ const TikTokIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' })
   </svg>
 );
 
-export const Footer: React.FC = () => {
+export const Footer: React.FC = React.memo(() => {
   const { config } = useSiteContent();
   const plateRef = useRef<HTMLImageElement>(null);
   const footerRef = useRef<HTMLElement>(null);
   const reducedMotion = useReducedMotion();
+  const tier = useTier();
 
   useEffect(() => {
-    if (reducedMotion || !plateRef.current || !footerRef.current) return;
+    if (reducedMotion || tier === 'low' || !plateRef.current || !footerRef.current) return;
     const ctx = gsap.context(() => {
       gsap.to(plateRef.current, {
-        rotation: 95,
+        rotation: 90,
         ease: 'none',
         scrollTrigger: {
           trigger: footerRef.current,
@@ -35,7 +37,7 @@ export const Footer: React.FC = () => {
     }, footerRef);
 
     return () => ctx.revert();
-  }, [reducedMotion]);
+  }, [reducedMotion, tier]);
 
   const socialItems = [
     { name: 'Instagram', href: config.socials.instagram, icon: <Instagram className="w-4 h-4" /> },
@@ -47,28 +49,27 @@ export const Footer: React.FC = () => {
   return (
     <footer
       ref={footerRef}
-      className="relative overflow-hidden bg-[#050505] pt-12 pb-8"
+      className="cv-section relative overflow-hidden bg-[#050505] pt-12 pb-8"
     >
-      {/* Glowing lime top line */}
       <div
         aria-hidden="true"
         className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-[#B6F500] to-transparent shadow-[0_0_24px_rgba(182,245,0,0.75)]"
       />
 
-      {/* Half-visible weight plate on right edge */}
       <img
         ref={plateRef}
         src="/images/plate.webp"
+        width={650}
+        height={559}
         alt=""
         aria-hidden="true"
         loading="lazy"
+        decoding="async"
         className="pointer-events-none hidden md:block absolute -right-24 top-1/2 -translate-y-1/2 w-56 h-56 object-contain opacity-65 select-none"
       />
 
       <div className="relative z-10 mx-auto max-w-[1280px] px-5 lg:px-8">
-        {/* 4 columns separated by 1px dividers */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-0 pb-10">
-          {/* Column 1: Logo */}
           <div className="lg:pr-8 flex flex-col justify-center">
             <Link to="/" aria-label="JS FITNESS INC Home">
               <JSLogo size="md" />
@@ -78,7 +79,6 @@ export const Footer: React.FC = () => {
             </p>
           </div>
 
-          {/* Column 2: Contact Info */}
           <div className="lg:px-8 lg:border-l lg:border-white/10">
             <h3 className="text-sm font-bold text-white mb-4">Contact Info</h3>
             <ul className="space-y-3 text-xs text-[#C9C9C9]">
@@ -107,7 +107,6 @@ export const Footer: React.FC = () => {
             </ul>
           </div>
 
-          {/* Column 3: Follow Us */}
           <div className="lg:px-8 lg:border-l lg:border-white/10">
             <h3 className="text-sm font-bold text-white mb-4">Follow Us</h3>
             <div className="flex items-center gap-3">
@@ -118,7 +117,7 @@ export const Footer: React.FC = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`Follow Jatinder Singh on ${item.name}`}
-                    className="flex h-10 w-10 items-center justify-center rounded-full border border-[#B6F500]/45 bg-white/[0.03] text-white hover:bg-[#B6F500] hover:text-[#050505] hover:shadow-[0_0_18px_rgba(182,245,0,0.45)] transition-all duration-300"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-[#B6F500]/45 bg-white/[0.03] text-white hover:bg-[#B6F500] hover:text-[#050505] transition-colors duration-200"
                   >
                     {item.icon}
                   </a>
@@ -127,7 +126,6 @@ export const Footer: React.FC = () => {
             </div>
           </div>
 
-          {/* Column 4: Hours */}
           <div className="lg:pl-8 lg:border-l lg:border-white/10">
             <h3 className="text-sm font-bold text-white mb-4">Hours</h3>
             <div className="space-y-2 text-xs text-[#C9C9C9]">
@@ -137,7 +135,6 @@ export const Footer: React.FC = () => {
           </div>
         </div>
 
-        {/* Bottom rounded outline bar with lime border */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-full border border-[#B6F500]/35 bg-white/[0.02] px-6 py-3 text-[11px] text-[#8C8C8C]">
           <span>{config.brand.copyright}</span>
           <div className="flex items-center gap-3">
@@ -153,4 +150,4 @@ export const Footer: React.FC = () => {
       </div>
     </footer>
   );
-};
+});

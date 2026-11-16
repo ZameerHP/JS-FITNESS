@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useSiteContent } from '../../context/ContentContext';
 
@@ -36,12 +36,12 @@ export const VideoModal: React.FC = () => {
   return (
     <AnimatePresence>
       {videoModalOpen && walkthrough && (
-        <motion.div
-          initial={{ clipPath: 'circle(0% at 30% 60%)', opacity: 0.7 }}
-          animate={{ clipPath: 'circle(150% at 50% 50%)', opacity: 1 }}
-          exit={{ clipPath: 'circle(0% at 30% 60%)', opacity: 0 }}
-          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-          className="fixed inset-0 z-[9990] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4 sm:p-8"
+        <m.div
+          initial={{ scale: 0.92, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.94, opacity: 0 }}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          className="fixed inset-0 z-[9990] flex items-center justify-center bg-black/95 p-4 sm:p-8"
           role="dialog"
           aria-modal="true"
           aria-label="Gym walkthrough video"
@@ -80,7 +80,7 @@ export const VideoModal: React.FC = () => {
               );
             })()}
           </div>
-        </motion.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

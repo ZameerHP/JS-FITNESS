@@ -1,9 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { gsap } from '../../lib/gsap';
 import { HOME_COPY } from '../../config/siteConfig';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { useTier } from '../../lib/perfTier';
 
-const FeatureIcon: React.FC<{ name: string; active: boolean }> = ({ name }) => {
+const FeatureIcon: React.FC<{ name: string }> = ({ name }) => {
   switch (name) {
     case 'clock':
       return (
@@ -50,14 +51,16 @@ const FeatureIcon: React.FC<{ name: string; active: boolean }> = ({ name }) => {
   }
 };
 
-export const FeatureStrip: React.FC = () => {
+export const FeatureStrip: React.FC = React.memo(() => {
   const panelRef = useRef<HTMLDivElement>(null);
+  const spotlightRef = useRef<HTMLDivElement>(null);
+  const rectRef = useRef<DOMRect | null>(null);
   const reducedMotion = useReducedMotion();
-  const [spotlight, setSpotlight] = useState({ x: 50, y: 50, active: false });
+  const tier = useTier();
 
   useEffect(() => {
     const el = panelRef.current;
-    if (!el || reducedMotion) return;
+    if (!el || reducedMotion || tier === 'low') return;
 
     const strokes = el.querySelectorAll<SVGGeometryElement>('.feature-stroke');
     strokes.forEach((s) => {
@@ -70,12 +73,12 @@ export const FeatureStrip: React.FC = () => {
     const ctx = gsap.context(() => {
       gsap.fromTo(
         el,
-        { y: 80, rotateX: 20, opacity: 0 },
+        { y: 50, rotateX: 14, opacity: 0 },
         {
           y: 0,
           rotateX: 6,
           opacity: 1,
-          duration: 0.9,
+          duration: 0.75,
           ease: 'power3.out',
           scrollTrigger: {
             trigger: el,
@@ -87,8 +90,8 @@ export const FeatureStrip: React.FC = () => {
 
       gsap.to(strokes, {
         strokeDashoffset: 0,
-        duration: 0.85,
-        stagger: 0.06,
+        duration: 0.75,
+        stagger: 0.05,
         ease: 'power2.out',
         scrollTrigger: {
           trigger: el,
@@ -99,16 +102,46 @@ export const FeatureStrip: React.FC = () => {
     }, el);
 
     return () => ctx.revert();
-  }, [reducedMotion]);
+  }, [reducedMotion, tier]);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!panelRef.current || reducedMotion) return;
-    const rect = panelRef.current.getBoundingClientRect();
-    setSpotlight({
-      x: ((e.clientX - rect.left) / rect.width) * 100,
-      y: ((e.clientY - rect.top) / rect.height) * 100,
-      active: true,
-    });
+  // Pause conic border rotation when offscreen
+  useEffect(() => {
+    const el = panelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        el.dataset.inview = entries[0]?.isIntersecting ? '1' : '0';
+      },
+      { threshold: 0.05 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  const handleEnter = () => {
+    if (!panelRef.current || reducedMotion || tier !== 'high') return;
+    rectRef.current = panelRef.current.getBoundingClientRect();
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (reducedMotion || tier !== 'high' || e.pointerType === 'touch') return;
+    const rect = rectRef.current || panelRef.current?.getBoundingClientRect();
+    if (!rect || !spotlightRef.current) return;
+    rectRef.current = rect;
+
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    spotlightRef.current.style.opacity = '1';
+    spotlightRef.current.style.background = `radial-gradient(240px circle at ${x.toFixed(
+      1
+    )}% ${y.toFixed(1)}%, rgba(182,245,0,0.14), transparent 70%)`;
+  };
+
+  const handleLeave = () => {
+    rectRef.current = null;
+    if (spotlightRef.current) {
+      spotlightRef.current.style.opacity = '0';
+    }
   };
 
   return (
@@ -119,40 +152,45 @@ export const FeatureStrip: React.FC = () => {
       <div style={{ perspective: '1000px' }}>
         <div
           ref={panelRef}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={() => setSpotlight((p) => ({ ...p, active: false }))}
-          className="feature-conic-border relative overflow-hidden rounded-[28px] glass-panel shadow-[0_24px_64px_rgba(0,0,0,0.85)]"
+          onPointerEnter={handleEnter}
+          onPointerMove={handlePointerMove}
+          onPointerLeave={handleLeave}
+          style={{ transform: 'rotateX(6deg)' }}
+          className="feature-conic-border relative overflow-hidden rounded-[28px] glass-panel glass-blur shadow-[0_24px_64px_rgba(0,0,0,0.85)]"
         >
           {/* Left & Right edge lime ambient glows */}
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute -top-10 -left-10 w-56 h-36 rounded-full bg-[#B6F500]/25 blur-3xl"
+            className="pointer-events-none absolute -top-10 -left-10 w-56 h-36 rounded-full opacity-55"
+            style={{
+              background: 'radial-gradient(circle, rgba(182,245,0,0.28) 0%, transparent 70%)',
+            }}
           />
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute -bottom-10 -right-10 w-56 h-36 rounded-full bg-[#B6F500]/25 blur-3xl"
+            className="pointer-events-none absolute -bottom-10 -right-10 w-56 h-36 rounded-full opacity-55"
+            style={{
+              background: 'radial-gradient(circle, rgba(182,245,0,0.28) 0%, transparent 70%)',
+            }}
           />
 
-          {/* Cursor-following radial spotlight */}
+          {/* Cursor-following radial spotlight (mutated directly on ref) */}
           <div
+            ref={spotlightRef}
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0 transition-opacity duration-300"
-            style={{
-              opacity: spotlight.active ? 1 : 0,
-              background: `radial-gradient(240px circle at ${spotlight.x}% ${spotlight.y}%, rgba(182,245,0,0.14), transparent 70%)`,
-            }}
+            className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300"
           />
 
           <div className="relative z-10 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
             {HOME_COPY.features.map((feat, idx) => (
               <div
                 key={feat.id}
-                className={`group flex flex-col items-center justify-center px-4 py-7 text-center transition-colors duration-300 hover:bg-white/[0.03] ${
+                className={`group flex flex-col items-center justify-center px-4 py-7 text-center transition-colors duration-300 hover-surface ${
                   idx > 0 ? 'lg:border-l lg:border-white/[0.08]' : ''
                 } ${idx === 4 ? 'col-span-2 sm:col-span-1' : ''}`}
               >
-                <div className="mb-3 transition-all duration-300 group-hover:-translate-y-1 group-hover:drop-shadow-[0_0_12px_rgba(182,245,0,0.8)]">
-                  <FeatureIcon name={feat.icon} active />
+                <div className="mb-3 feature-icon-wrap">
+                  <FeatureIcon name={feat.icon} />
                 </div>
                 <div className="text-[14px] font-medium leading-snug text-white group-hover:text-[#B6F500] transition-colors">
                   {feat.lines[0]}
@@ -166,4 +204,4 @@ export const FeatureStrip: React.FC = () => {
       </div>
     </section>
   );
-};
+});

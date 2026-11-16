@@ -2,11 +2,13 @@ import React, { useEffect, useRef } from 'react';
 import { gsap } from '../../lib/gsap';
 import { HOME_COPY } from '../../config/siteConfig';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { useTier } from '../../lib/perfTier';
 import { Button } from '../ui/Button';
 import { SplitReveal } from '../ui/SplitReveal';
 
-export const FounderSection: React.FC = () => {
+export const FounderSection: React.FC = React.memo(() => {
   const reducedMotion = useReducedMotion();
+  const tier = useTier();
   const sectionRef = useRef<HTMLElement>(null);
   const photoWrapRef = useRef<HTMLDivElement>(null);
   const photoImgRef = useRef<HTMLImageElement>(null);
@@ -17,48 +19,46 @@ export const FounderSection: React.FC = () => {
 
   useEffect(() => {
     const el = sectionRef.current;
-    if (!el || reducedMotion) return;
+    if (!el || reducedMotion || tier === 'low') return;
 
     const ctx = gsap.context(() => {
-      // Top & bottom lime framing lines draw across
       gsap.fromTo(
         [topLineRef.current, bottomLineRef.current],
         { scaleX: 0 },
         {
           scaleX: 1,
-          duration: 1.1,
+          duration: 0.9,
           ease: 'power3.out',
-          scrollTrigger: { trigger: el, start: 'top 82%', once: true },
+          scrollTrigger: { trigger: el, start: 'top 84%', once: true },
         }
       );
 
-      // Left photo clip-path wipe & zoom
       gsap.fromTo(
         photoWrapRef.current,
-        { clipPath: 'inset(0 100% 0 0)' },
+        { opacity: 0, x: -24 },
         {
-          clipPath: 'inset(0 0% 0 0)',
-          duration: 1.1,
+          opacity: 1,
+          x: 0,
+          duration: 0.9,
           ease: 'power3.out',
-          scrollTrigger: { trigger: el, start: 'top 78%', once: true },
+          scrollTrigger: { trigger: el, start: 'top 80%', once: true },
         }
       );
 
       gsap.fromTo(
         photoImgRef.current,
-        { scale: 1.1 },
+        { scale: 1.08 },
         {
           scale: 1,
-          duration: 1.4,
+          duration: 1.1,
           ease: 'power3.out',
-          scrollTrigger: { trigger: el, start: 'top 78%', once: true },
+          scrollTrigger: { trigger: el, start: 'top 80%', once: true },
         }
       );
 
-      // Neon JS sign flicker effect on enter
-      if (neonOverlayRef.current) {
+      if (neonOverlayRef.current && tier === 'high') {
         const flickerTl = gsap.timeline({
-          scrollTrigger: { trigger: el, start: 'top 72%', once: true },
+          scrollTrigger: { trigger: el, start: 'top 74%', once: true },
         });
         flickerTl
           .to(neonOverlayRef.current, { opacity: 0.9, duration: 0.08 })
@@ -68,31 +68,29 @@ export const FounderSection: React.FC = () => {
           .to(neonOverlayRef.current, { opacity: 0.75, duration: 0.35 });
       }
 
-      // Handwritten script wipe
       if (scriptRef.current) {
         gsap.fromTo(
           scriptRef.current,
-          { clipPath: 'inset(0 100% 0 0)', opacity: 0 },
+          { x: -16, opacity: 0 },
           {
-            clipPath: 'inset(0 0% 0 0)',
+            x: 0,
             opacity: 1,
-            duration: 1.2,
+            duration: 0.85,
             ease: 'power2.out',
-            scrollTrigger: { trigger: scriptRef.current, start: 'top 85%', once: true },
+            scrollTrigger: { trigger: scriptRef.current, start: 'top 86%', once: true },
           }
         );
       }
     }, el);
 
     return () => ctx.revert();
-  }, [reducedMotion]);
+  }, [reducedMotion, tier]);
 
   return (
     <section
       ref={sectionRef}
-      className="relative overflow-hidden bg-[#050505]"
+      className="cv-section relative overflow-hidden bg-[#050505] isolate"
     >
-      {/* Top & bottom glowing lime horizontal lines */}
       <div
         ref={topLineRef}
         aria-hidden="true"
@@ -101,7 +99,6 @@ export const FounderSection: React.FC = () => {
 
       <div className="mx-auto max-w-[1280px] px-5 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 items-center">
-          {/* Left half: Full-bleed photo of Jatinder */}
           <div className="lg:col-span-6 relative">
             <div
               ref={photoWrapRef}
@@ -110,17 +107,24 @@ export const FounderSection: React.FC = () => {
               <img
                 ref={photoImgRef}
                 src="/images/founder.webp"
+                srcSet="/images/founder-700.webp 700w, /images/founder.webp 1000w"
+                sizes="(max-width: 1024px) 100vw, 600px"
+                width={1000}
+                height={1333}
                 alt="Jatinder Singh — Founder & Certified Personal Trainer at JS FITNESS INC"
                 loading="lazy"
+                decoding="async"
                 className="h-full w-full object-cover object-top"
               />
-              {/* Subtle neon glow flicker overlay behind JS sign */}
               <div
                 ref={neonOverlayRef}
                 aria-hidden="true"
-                className="pointer-events-none absolute top-10 right-16 h-40 w-40 rounded-full bg-[#B6F500]/25 blur-3xl opacity-75"
+                className="pointer-events-none absolute top-10 right-16 h-44 w-44 rounded-full opacity-75"
+                style={{
+                  background:
+                    'radial-gradient(circle, rgba(182, 245, 0, 0.25) 0%, transparent 70%)',
+                }}
               />
-              {/* Edge blending gradients */}
               <div
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#050505]/70 via-transparent to-[#050505]"
@@ -132,7 +136,6 @@ export const FounderSection: React.FC = () => {
             </div>
           </div>
 
-          {/* Right half: Bio + Stronger Together script */}
           <div className="lg:col-span-6 py-12 lg:py-16 lg:pl-12 relative">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-8">
               <div className="max-w-[380px]">
@@ -157,7 +160,6 @@ export const FounderSection: React.FC = () => {
                 </div>
               </div>
 
-              {/* Script text: Stronger Together */}
               <div
                 ref={scriptRef}
                 style={{ textShadow: '0 0 24px rgba(182, 245, 0, 0.45)' }}
@@ -189,4 +191,4 @@ export const FounderSection: React.FC = () => {
       />
     </section>
   );
-};
+});

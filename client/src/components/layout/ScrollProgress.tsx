@@ -1,24 +1,21 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { gsap } from '../../lib/gsap';
+import { subscribeScroll } from '../../hooks/useLenis';
 
-export const ScrollProgress: React.FC = () => {
-  const [progress, setProgress] = useState(0);
+export const ScrollProgress: React.FC = React.memo(() => {
+  const barRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const update = () => {
-      const scrollTop = window.scrollY || document.documentElement.scrollTop;
-      const docHeight =
-        document.documentElement.scrollHeight - document.documentElement.clientHeight;
-      const pct = docHeight > 0 ? Math.min(100, Math.max(0, (scrollTop / docHeight) * 100)) : 0;
-      setProgress(pct);
-    };
+    const el = barRef.current;
+    if (!el) return;
 
-    gsap.ticker.add(update);
-    window.addEventListener('scroll', update, { passive: true });
-    return () => {
-      gsap.ticker.remove(update);
-      window.removeEventListener('scroll', update);
-    };
+    const setScale = gsap.quickSetter(el, 'scaleX');
+    setScale(0);
+
+    return subscribeScroll((scrollY, limit) => {
+      const ratio = limit > 0 ? Math.min(1, Math.max(0, scrollY / limit)) : 0;
+      setScale(ratio);
+    });
   }, []);
 
   return (
@@ -27,9 +24,10 @@ export const ScrollProgress: React.FC = () => {
       className="fixed top-0 left-0 right-0 z-[100] h-[2px] bg-transparent pointer-events-none"
     >
       <div
-        className="h-full bg-[#B6F500] shadow-[0_0_10px_rgba(182,245,0,0.85)] transition-[width] duration-75"
-        style={{ width: `${progress}%` }}
+        ref={barRef}
+        className="h-full w-full origin-left bg-[#B6F500] shadow-[0_0_8px_rgba(182,245,0,0.75)]"
+        style={{ transform: 'scaleX(0)' }}
       />
     </div>
   );
-};
+});

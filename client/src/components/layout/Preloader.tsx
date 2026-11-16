@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { gsap } from '../../lib/gsap';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { startPerfWatchdog, useTier } from '../../lib/perfTier';
 
 interface PreloaderProps {
   onComplete: () => void;
@@ -10,13 +11,11 @@ const SESSION_KEY = 'js_preloader_seen';
 
 export const Preloader: React.FC<PreloaderProps> = ({ onComplete }) => {
   const reducedMotion = useReducedMotion();
+  const tier = useTier();
   const [visible, setVisible] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return !sessionStorage.getItem(SESSION_KEY);
   });
-  const [count, setCount] = useState(0);
-  const [plates, setPlates] = useState(0);
-  const [activeWord, setActiveWord] = useState(-1);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const topCurtainRef = useRef<HTMLDivElement>(null);
@@ -27,6 +26,9 @@ export const Preloader: React.FC<PreloaderProps> = ({ onComplete }) => {
   const fitnessIncRef = useRef<HTMLDivElement>(null);
   const jsStrokeJRef = useRef<SVGPathElement>(null);
   const jsStrokeSRef = useRef<SVGPathElement>(null);
+  const countRef = useRef<HTMLSpanElement>(null);
+  const platesRef = useRef<HTMLDivElement>(null);
+  const wordsRef = useRef<HTMLDivElement>(null);
   const doneRef = useRef(false);
 
   const finish = () => {
@@ -34,41 +36,42 @@ export const Preloader: React.FC<PreloaderProps> = ({ onComplete }) => {
     doneRef.current = true;
     sessionStorage.setItem(SESSION_KEY, '1');
     setVisible(false);
+    startPerfWatchdog();
     onComplete();
   };
 
   useEffect(() => {
     if (!visible) {
+      startPerfWatchdog();
       onComplete();
       return;
     }
 
-    // Preload hero assets while preloader runs
+    // Decode hero images during preloader so hero entrance has zero image decode jank
     ['/images/hero-athlete.webp', '/images/hero-bg.webp'].forEach((src) => {
       const img = new Image();
       img.src = src;
+      if (typeof img.decode === 'function') {
+        img.decode().catch(() => {});
+      }
     });
 
-    if (reducedMotion) {
-      const timer = setTimeout(finish, 400);
+    if (reducedMotion || tier === 'low') {
+      const timer = setTimeout(finish, 300);
       return () => clearTimeout(timer);
     }
 
-    const hardCap = setTimeout(() => {
-      finish();
-    }, 4000);
+    const hardCap = setTimeout(finish, 3800);
 
     const ctx = gsap.context(() => {
       const tl = gsap.timeline();
 
-      // 0.0s: thin lime line draws across center
       tl.fromTo(
         centerLineRef.current,
         { scaleX: 0, opacity: 1 },
-        { scaleX: 1, duration: 0.55, ease: 'power3.out' }
+        { scaleX: 1, duration: 0.45, ease: 'power3.out' }
       );
 
-      // 0.35s: SVG JS logo strokes draw on with lime glow
       [jsStrokeJRef.current, jsStrokeSRef.current].forEach((p) => {
         if (p) {
           const len = p.getTotalLength();
@@ -78,79 +81,66 @@ export const Preloader: React.FC<PreloaderProps> = ({ onComplete }) => {
 
       tl.to(
         [jsStrokeJRef.current, jsStrokeSRef.current],
-        {
-          strokeDashoffset: 0,
-          duration: 0.9,
-          stagger: 0.15,
-          ease: 'power2.inOut',
-        },
-        0.35
+        { strokeDashoffset: 0, duration: 0.75, stagger: 0.12, ease: 'power2.inOut' },
+        0.25
       );
 
-      // Fill metallic & slash streak
       tl.fromTo(
         streakRef.current,
         { xPercent: -160, opacity: 0 },
-        { xPercent: 200, opacity: 1, duration: 0.6, ease: 'power2.inOut' },
-        1.0
+        { xPercent: 200, opacity: 1, duration: 0.5, ease: 'power2.inOut' },
+        0.8
       );
 
-      // FITNESS INC tracks in from wide letter-spacing
       tl.fromTo(
         fitnessIncRef.current,
-        { letterSpacing: '0.75em', opacity: 0 },
-        { letterSpacing: '0.28em', opacity: 1, duration: 0.65, ease: 'power3.out' },
-        0.95
+        { opacity: 0, y: 6 },
+        { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' },
+        0.75
       );
 
-      // Counter 000 -> 100 and barbell plates
+      // Update counter & plates directly on DOM refs (zero React re-renders)
       const counterObj = { val: 0 };
+      const plateEls = platesRef.current?.querySelectorAll<HTMLElement>('[data-plate]') || [];
+      let lastPlates = 0;
+
       tl.to(
         counterObj,
         {
           val: 100,
-          duration: 2.3,
+          duration: 1.9,
           ease: 'power2.inOut',
           onUpdate: () => {
             const v = Math.round(counterObj.val);
-            setCount(v);
-            setPlates(Math.floor(v / 25));
+            if (countRef.current) countRef.current.textContent = String(v).padStart(3, '0');
+            const pCount = Math.floor(v / 25);
+            if (pCount !== lastPlates) {
+              lastPlates = pCount;
+              plateEls.forEach((el) => {
+                const idx = Number(el.dataset.plate || 99);
+                el.style.backgroundColor = idx <= pCount ? '#B6F500' : 'rgba(255,255,255,0.15)';
+              });
+            }
           },
         },
-        0.2
+        0.15
       );
 
-      // Words flash one by one
-      tl.call(() => setActiveWord(0), [], 1.25)
-        .call(() => setActiveWord(1), [], 1.55)
-        .call(() => setActiveWord(2), [], 1.85)
-        .call(() => setActiveWord(3), [], 2.15);
+      if (wordsRef.current) {
+        const wEls = wordsRef.current.children;
+        tl.to(wEls, { opacity: 1, scale: 1, duration: 0.15, stagger: 0.25 }, 0.95);
+      }
 
-      // Exit: logo scales into lime ring, top and bottom black panels split open
       tl.to(
         logoGroupRef.current,
-        {
-          scale: 1.15,
-          opacity: 0,
-          duration: 0.45,
-          ease: 'power3.in',
-        },
-        2.75
+        { scale: 1.12, opacity: 0, duration: 0.35, ease: 'power3.in' },
+        2.35
       )
-        .to(
-          topCurtainRef.current,
-          { yPercent: -100, duration: 0.65, ease: 'expo.inOut' },
-          3.0
-        )
+        .to(topCurtainRef.current, { yPercent: -100, duration: 0.55, ease: 'expo.inOut' }, 2.55)
         .to(
           bottomCurtainRef.current,
-          {
-            yPercent: 100,
-            duration: 0.65,
-            ease: 'expo.inOut',
-            onComplete: finish,
-          },
-          3.0
+          { yPercent: 100, duration: 0.55, ease: 'expo.inOut', onComplete: finish },
+          2.55
         );
     }, rootRef);
 
@@ -158,7 +148,7 @@ export const Preloader: React.FC<PreloaderProps> = ({ onComplete }) => {
       clearTimeout(hardCap);
       ctx.revert();
     };
-  }, [visible, reducedMotion]);
+  }, [visible, reducedMotion, tier]);
 
   if (!visible) return null;
 
@@ -171,38 +161,18 @@ export const Preloader: React.FC<PreloaderProps> = ({ onComplete }) => {
       role="status"
       aria-label="Loading JS FITNESS INC"
     >
-      {/* Top & bottom split black panels */}
-      <div
-        ref={topCurtainRef}
-        className="absolute top-0 left-0 right-0 h-1/2 bg-[#050505]"
-      >
-        <div className="film-grain absolute inset-0 pointer-events-none" />
-      </div>
-      <div
-        ref={bottomCurtainRef}
-        className="absolute bottom-0 left-0 right-0 h-1/2 bg-[#050505]"
-      >
-        <div className="film-grain absolute inset-0 pointer-events-none" />
-      </div>
+      <div ref={topCurtainRef} className="absolute top-0 left-0 right-0 h-1/2 bg-[#050505]" />
+      <div ref={bottomCurtainRef} className="absolute bottom-0 left-0 right-0 h-1/2 bg-[#050505]" />
 
-      {/* Center thin lime divider line */}
       <div
         ref={centerLineRef}
-        className="absolute top-1/2 left-0 right-0 h-[1px] -translate-y-1/2 bg-gradient-to-r from-transparent via-[#B6F500] to-transparent shadow-[0_0_20px_rgba(182,245,0,0.8)]"
+        className="absolute top-1/2 left-0 right-0 h-[1px] -translate-y-1/2 bg-gradient-to-r from-transparent via-[#B6F500] to-transparent"
       />
 
-      {/* Center Monogram & Words */}
       <div className="relative z-10 m-auto flex flex-col items-center justify-center px-4 text-center">
-        <div
-          ref={logoGroupRef}
-          className="relative flex flex-col items-center p-6 rounded-full"
-        >
-          {/* SVG JS Mark */}
+        <div ref={logoGroupRef} className="relative flex flex-col items-center p-6 rounded-full">
           <div className="relative overflow-hidden px-4 py-2">
-            <svg
-              viewBox="0 0 180 96"
-              className="w-36 h-20 drop-shadow-[0_0_18px_rgba(182,245,0,0.55)]"
-            >
+            <svg viewBox="0 0 180 96" className="w-36 h-20">
               <path
                 ref={jsStrokeJRef}
                 d="M66 16 L54 64 C51 76 42 82 30 82 C20 82 14 76 16 66"
@@ -221,7 +191,6 @@ export const Preloader: React.FC<PreloaderProps> = ({ onComplete }) => {
                 strokeLinecap="round"
               />
             </svg>
-            {/* Light streak slash */}
             <div
               ref={streakRef}
               className="pointer-events-none absolute inset-y-0 w-10 -skew-x-25 bg-gradient-to-r from-transparent via-white/80 to-transparent"
@@ -235,14 +204,14 @@ export const Preloader: React.FC<PreloaderProps> = ({ onComplete }) => {
             FITNESS INC
           </div>
 
-          {/* Flashed words */}
-          <div className="mt-5 flex items-center gap-3 h-7">
+          <div ref={wordsRef} className="mt-5 flex items-center gap-3 h-7">
             {words.map((word, idx) => (
               <span
                 key={word}
-                className={`font-display italic font-black text-xl uppercase transition-all duration-150 ${
-                  activeWord >= idx ? 'opacity-100 scale-100' : 'opacity-15 scale-90'
-                } ${idx === 3 ? 'text-[#B6F500] drop-shadow-[0_0_14px_rgba(182,245,0,0.75)]' : 'text-white'}`}
+                style={{ opacity: 0.15, transform: 'scale(0.92)' }}
+                className={`font-display italic font-black text-xl uppercase ${
+                  idx === 3 ? 'text-[#B6F500]' : 'text-white'
+                }`}
               >
                 {word}
               </span>
@@ -251,23 +220,19 @@ export const Preloader: React.FC<PreloaderProps> = ({ onComplete }) => {
         </div>
       </div>
 
-      {/* Bottom HUD: Counter (left), Barbell loader (center), Skip (right) */}
       <div className="relative z-10 flex items-center justify-between px-6 sm:px-10 pb-8">
-        {/* Counter 000 - 100 */}
         <div className="font-display italic font-black text-2xl sm:text-3xl tracking-wider text-white/90 tabular-nums">
-          {String(count).padStart(3, '0')}
+          <span ref={countRef}>000</span>
           <span className="text-[#B6F500] text-base ml-0.5">%</span>
         </div>
 
-        {/* Barbell plate loader */}
-        <div className="flex items-center gap-1" aria-hidden="true">
+        <div ref={platesRef} className="flex items-center gap-1" aria-hidden="true">
           <div className="flex items-center gap-0.5">
             {[4, 3, 2, 1].map((p) => (
               <span
                 key={`l-${p}`}
-                className={`w-2 rounded-sm transition-all duration-200 ${
-                  plates >= p ? 'bg-[#B6F500] shadow-[0_0_8px_#B6F500]' : 'bg-white/15'
-                }`}
+                data-plate={p}
+                className="w-2 rounded-sm bg-white/15 transition-colors duration-150"
                 style={{ height: `${14 + p * 4}px` }}
               />
             ))}
@@ -277,9 +242,8 @@ export const Preloader: React.FC<PreloaderProps> = ({ onComplete }) => {
             {[1, 2, 3, 4].map((p) => (
               <span
                 key={`r-${p}`}
-                className={`w-2 rounded-sm transition-all duration-200 ${
-                  plates >= p ? 'bg-[#B6F500] shadow-[0_0_8px_#B6F500]' : 'bg-white/15'
-                }`}
+                data-plate={p}
+                className="w-2 rounded-sm bg-white/15 transition-colors duration-150"
                 style={{ height: `${14 + p * 4}px` }}
               />
             ))}

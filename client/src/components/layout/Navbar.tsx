@@ -1,40 +1,54 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
 import { NAV_LINKS } from '../../config/siteConfig';
 import { useSiteContent } from '../../context/ContentContext';
+import { subscribeScroll } from '../../hooks/useLenis';
 import { JSLogo } from '../ui/JSLogo';
 import { Button } from '../ui/Button';
 
-export const Navbar: React.FC = () => {
-  const location = useLocation();
-  const { openBooking, transformations } = useSiteContent();
-  const [scrolled, setScrolled] = useState(false);
-  const [hidden, setHidden] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
+interface NavbarProps {
+  onPrefetchRoute?: (path: string) => void;
+}
 
-  const visibleLinks = NAV_LINKS.filter((link) => {
-    if (link.path === '/transformations' && transformations.length === 0) {
-      return true; // Route still reachable; or let user navigate
-    }
-    return true;
-  });
+export const Navbar: React.FC<NavbarProps> = React.memo(({ onPrefetchRoute }) => {
+  const location = useLocation();
+  const { openBooking } = useSiteContent();
+  const headerRef = useRef<HTMLElement>(null);
+  const mobileOpenRef = useRef(false);
+  const [mobileOpen, setMobileOpen] = React.useState(false);
+
+  useEffect(() => {
+    mobileOpenRef.current = mobileOpen;
+  }, [mobileOpen]);
 
   useEffect(() => {
     let lastY = window.scrollY;
-    const onScroll = () => {
-      const y = window.scrollY;
-      setScrolled(y > 36);
-      if (y > 140 && y > lastY + 8) {
-        setHidden(true);
-      } else if (y < lastY - 6 || y < 80) {
-        setHidden(false);
-      }
-      lastY = y;
+    let isScrolled = false;
+    let isHidden = false;
+
+    const applyClasses = () => {
+      const el = headerRef.current;
+      if (!el) return;
+      el.classList.toggle('-translate-y-full', isHidden && !mobileOpenRef.current);
+      el.classList.toggle('translate-y-0', !isHidden || mobileOpenRef.current);
+      el.classList.toggle('navbar-scrolled', isScrolled);
     };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+
+    return subscribeScroll((y) => {
+      const nextScrolled = y > 36;
+      let nextHidden = isHidden;
+      if (y > 140 && y > lastY + 8) nextHidden = true;
+      else if (y < lastY - 6 || y < 80) nextHidden = false;
+      lastY = y;
+
+      if (nextScrolled !== isScrolled || nextHidden !== isHidden) {
+        isScrolled = nextScrolled;
+        isHidden = nextHidden;
+        applyClasses();
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -44,37 +58,33 @@ export const Navbar: React.FC = () => {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-50 h-[72px] transition-all duration-300 ${
-          hidden && !mobileOpen ? '-translate-y-full' : 'translate-y-0'
-        } ${
-          scrolled
-            ? 'bg-[#050505]/75 backdrop-blur-xl border-b border-[#B6F500]/20 shadow-[0_8px_32px_rgba(0,0,0,0.45)]'
-            : 'bg-transparent border-b border-transparent'
-        }`}
+        ref={headerRef}
+        className="fixed top-0 left-0 right-0 z-50 h-[72px] translate-y-0 bg-transparent border-b border-transparent transition-[transform,background-color,border-color] duration-300"
       >
         <div className="mx-auto flex h-full max-w-[1280px] items-center justify-between px-5 lg:px-8">
           <Link to="/" aria-label="JS FITNESS INC Home" className="shrink-0">
             <JSLogo size="sm" />
           </Link>
 
-          {/* Center nav links */}
           <nav aria-label="Main navigation" className="hidden min-[820px]:flex items-center gap-4 lg:gap-7">
-            {visibleLinks.map((item) => {
+            {NAV_LINKS.map((item) => {
               const isActive = location.pathname === item.path;
               return (
                 <Link
                   key={item.path}
                   to={item.path}
+                  onMouseEnter={() => onPrefetchRoute?.(item.path)}
+                  onTouchStart={() => onPrefetchRoute?.(item.path)}
                   className={`relative py-2 text-[11px] lg:text-[12px] font-medium tracking-[0.02em] whitespace-nowrap transition-colors ${
                     isActive ? 'text-[#B6F500]' : 'text-white/80 hover:text-white'
                   }`}
                 >
                   {item.label}
                   {isActive && (
-                    <motion.span
+                    <m.span
                       layoutId="nav-underline"
                       transition={{ type: 'spring', stiffness: 420, damping: 32 }}
-                      className="absolute left-0 right-0 -bottom-0.5 h-[2px] rounded-full bg-[#B6F500] shadow-[0_0_10px_#B6F500]"
+                      className="absolute left-0 right-0 -bottom-0.5 h-[2px] rounded-full bg-[#B6F500] shadow-[0_0_8px_#B6F500]"
                     />
                   )}
                 </Link>
@@ -82,7 +92,6 @@ export const Navbar: React.FC = () => {
             })}
           </nav>
 
-          {/* Right CTA & Mobile toggle */}
           <div className="flex items-center gap-3">
             <div className="hidden sm:block">
               <Button variant="nav" onClick={() => openBooking('tour')}>
@@ -102,25 +111,24 @@ export const Navbar: React.FC = () => {
         </div>
       </header>
 
-      {/* Fullscreen Mobile Menu with Lime Wipe */}
       <AnimatePresence>
         {mobileOpen && (
-          <motion.div
-            initial={{ clipPath: 'inset(0 100% 0 0)' }}
-            animate={{ clipPath: 'inset(0 0% 0 0)' }}
-            exit={{ clipPath: 'inset(0 0 0 100%)' }}
-            transition={{ duration: 0.45, ease: [0.76, 0, 0.24, 1] }}
-            className="fixed inset-0 z-40 bg-[#050505] flex flex-col justify-between pt-24 pb-10 px-6 lg:hidden overflow-y-auto"
+          <m.div
+            initial={{ x: '-100%' }}
+            animate={{ x: '0%' }}
+            exit={{ x: '100%' }}
+            transition={{ duration: 0.4, ease: [0.76, 0, 0.24, 1] }}
+            className="fixed inset-0 z-40 bg-[#050505] flex flex-col justify-between pt-24 pb-10 px-6 min-[820px]:hidden overflow-y-auto"
           >
             <div className="flex flex-col gap-3">
-              {visibleLinks.map((item, idx) => {
+              {NAV_LINKS.map((item, idx) => {
                 const isActive = location.pathname === item.path;
                 return (
-                  <motion.div
+                  <m.div
                     key={item.path}
-                    initial={{ opacity: 0, x: -30 }}
+                    initial={{ opacity: 0, x: -24 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.1 + idx * 0.055, duration: 0.35 }}
+                    transition={{ delay: 0.08 + idx * 0.045, duration: 0.3 }}
                   >
                     <Link
                       to={item.path}
@@ -131,7 +139,7 @@ export const Navbar: React.FC = () => {
                     >
                       {item.label}
                     </Link>
-                  </motion.div>
+                  </m.div>
                 );
               })}
             </div>
@@ -150,9 +158,9 @@ export const Navbar: React.FC = () => {
                 STRATEGY ASSESSMENT — $99.99 CAD
               </Button>
             </div>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </>
   );
-};
+});

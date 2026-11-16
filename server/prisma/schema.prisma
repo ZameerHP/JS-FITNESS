@@ -39,6 +39,8 @@ model Transformation {
   order       Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([visible, order])
 }
 
 model Testimonial {
@@ -51,7 +53,9 @@ model Testimonial {
   visible   Boolean  @default(true)
   order     Int      @default(0)
   createdAt DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  updatedAt DateTime @updatedAt
+
+  @@index([visible, order])
 }
 
 model GalleryItem {
@@ -63,6 +67,8 @@ model GalleryItem {
   order     Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([visible, order])
 }
 
 model VideoItem {
@@ -75,6 +81,8 @@ model VideoItem {
   order         Int      @default(0)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  @@index([visible, order])
 }
 
 model Certification {
@@ -87,6 +95,8 @@ model Certification {
   order     Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([visible, order])
 }
 
 model ContactSubmission {

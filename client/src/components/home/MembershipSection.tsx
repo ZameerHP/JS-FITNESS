@@ -1,9 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Star, BarChart3, Crown } from 'lucide-react';
 import { gsap } from '../../lib/gsap';
 import { HOME_COPY, PricingPhase } from '../../config/siteConfig';
 import { useSiteContent } from '../../context/ContentContext';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { useTier } from '../../lib/perfTier';
 import { Button } from '../ui/Button';
 import { DrawPath } from '../ui/DrawPath';
 import { TiltCard } from '../ui/TiltCard';
@@ -19,45 +20,52 @@ const PhaseIcon: React.FC<{ icon: PricingPhase['icon'] }> = ({ icon }) => {
   }
 };
 
-export const MembershipSection: React.FC = () => {
+export const MembershipSection: React.FC = React.memo(() => {
   const { config } = useSiteContent();
   const reducedMotion = useReducedMotion();
+  const tier = useTier();
   const sectionRef = useRef<HTMLElement>(null);
   const bgRef = useRef<HTMLImageElement>(null);
   const accessRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
-
-  const [hoursNum, setHoursNum] = useState(reducedMotion ? 24 : 0);
-  const [daysNum, setDaysNum] = useState(reducedMotion ? 7 : 0);
-  const [slashIn, setSlashIn] = useState(reducedMotion);
+  const hoursRef = useRef<HTMLSpanElement>(null);
+  const daysRef = useRef<HTMLSpanElement>(null);
+  const slashRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     const el = sectionRef.current;
-    if (!el || reducedMotion) return;
+    if (!el) return;
+
+    if (reducedMotion || tier === 'low') {
+      if (hoursRef.current) hoursRef.current.textContent = '24';
+      if (daysRef.current) daysRef.current.textContent = '7';
+      if (slashRef.current) slashRef.current.style.opacity = '1';
+      return;
+    }
 
     const ctx = gsap.context(() => {
-      // Background slow parallax zoom
-      gsap.fromTo(
-        bgRef.current,
-        { scale: 1.05 },
-        {
-          scale: 1.16,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: el,
-            start: 'top bottom',
-            end: 'bottom top',
-            scrub: true,
-          },
-        }
-      );
+      if (tier === 'high' && bgRef.current) {
+        gsap.fromTo(
+          bgRef.current,
+          { scale: 1.04 },
+          {
+            scale: 1.14,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: el,
+              start: 'top bottom',
+              end: 'bottom top',
+              scrub: true,
+            },
+          }
+        );
+      }
 
-      // Odometer 24 / 7 + ACCESS wipe
       const odometer = { h: 0, d: 0 };
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: el,
-          start: 'top 72%',
+          start: 'top 76%',
           once: true,
         },
       });
@@ -65,34 +73,38 @@ export const MembershipSection: React.FC = () => {
       tl.to(odometer, {
         h: 24,
         d: 7,
-        duration: 0.9,
+        duration: 0.8,
         ease: 'power3.out',
         onUpdate: () => {
-          setHoursNum(Math.round(odometer.h));
-          setDaysNum(Math.round(odometer.d));
+          if (hoursRef.current) hoursRef.current.textContent = String(Math.round(odometer.h));
+          if (daysRef.current) daysRef.current.textContent = String(Math.round(odometer.d));
         },
       })
-        .call(() => setSlashIn(true), [], 0.35)
+        .fromTo(
+          slashRef.current,
+          { y: -20, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
+          0.3
+        )
         .fromTo(
           accessRef.current,
-          { clipPath: 'inset(0 100% 0 0)', opacity: 0 },
-          { clipPath: 'inset(0 0% 0 0)', opacity: 1, duration: 0.85, ease: 'power3.out' },
-          0.35
+          { x: -24, opacity: 0 },
+          { x: 0, opacity: 1, duration: 0.7, ease: 'power3.out' },
+          0.3
         );
 
-      // Card slide in & row stagger
       if (cardRef.current) {
         gsap.fromTo(
           cardRef.current,
-          { x: 60, opacity: 0 },
+          { x: 45, opacity: 0 },
           {
             x: 0,
             opacity: 1,
-            duration: 0.85,
+            duration: 0.75,
             ease: 'power3.out',
             scrollTrigger: {
               trigger: cardRef.current,
-              start: 'top 82%',
+              start: 'top 84%',
               once: true,
             },
           }
@@ -101,17 +113,17 @@ export const MembershipSection: React.FC = () => {
         const rows = cardRef.current.querySelectorAll('.phase-row');
         gsap.fromTo(
           rows,
-          { y: 20, opacity: 0 },
+          { y: 16, opacity: 0 },
           {
             y: 0,
             opacity: 1,
-            duration: 0.55,
-            stagger: 0.12,
-            delay: 0.2,
+            duration: 0.45,
+            stagger: 0.1,
+            delay: 0.15,
             ease: 'power3.out',
             scrollTrigger: {
               trigger: cardRef.current,
-              start: 'top 82%',
+              start: 'top 84%',
               once: true,
             },
           }
@@ -120,20 +132,25 @@ export const MembershipSection: React.FC = () => {
     }, el);
 
     return () => ctx.revert();
-  }, [reducedMotion]);
+  }, [reducedMotion, tier]);
 
   return (
     <section
       ref={sectionRef}
-      className="relative overflow-hidden bg-[#050505] py-24 lg:py-32"
+      className="cv-section relative overflow-hidden bg-[#050505] py-24 lg:py-32 isolate"
     >
       {/* Full-bleed dark gym interior background */}
       <div className="pointer-events-none absolute inset-0">
         <img
           ref={bgRef}
           src="/images/gym-interior.webp"
+          srcSet="/images/gym-interior-800.webp 800w, /images/gym-interior-1200.webp 1200w, /images/gym-interior.webp 1920w"
+          sizes="100vw"
+          width={1920}
+          height={1080}
           alt=""
           loading="lazy"
+          decoding="async"
           className="h-full w-full object-cover opacity-45"
         />
         <div
@@ -146,33 +163,22 @@ export const MembershipSection: React.FC = () => {
         />
       </div>
 
-      {/* Signature Lime Swoosh Curves sweeping across the section */}
+      {/* Signature Lime Swoosh Curves (dual-stroke glow, zero live SVG feGaussianBlur) */}
       <svg
         aria-hidden="true"
         viewBox="0 0 1440 620"
         preserveAspectRatio="none"
         className="pointer-events-none absolute inset-0 h-full w-full z-[2] overflow-visible"
       >
-        <defs>
-          <filter id="membership-swoosh-glow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="6" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-        {/* Top-right curve around card top */}
         <DrawPath
           d="M 940 70 C 1100 10, 1280 55, 1380 120"
           strokeWidth={2.5}
-          filterId="membership-swoosh-glow"
+          dualGlow
         />
-        {/* Lower-left sweeping curve under text and climbing right edge of card */}
         <DrawPath
           d="M -40 500 C 160 565, 580 545, 910 510 C 1180 480, 1290 420, 1295 270 C 1300 170, 1235 120, 1140 125"
           strokeWidth={3}
-          filterId="membership-swoosh-glow"
+          dualGlow
         />
       </svg>
 
@@ -183,16 +189,15 @@ export const MembershipSection: React.FC = () => {
             <div className="eyebrow-row mb-5">{HOME_COPY.membership.eyebrow}</div>
 
             <div className="headline-display select-none">
-              <div className="text-[88px] sm:text-[112px] lg:text-[120px] leading-[0.86] text-[#B6F500] drop-shadow-[0_0_32px_rgba(182,245,0,0.45)] tabular-nums">
-                <span>{hoursNum}</span>
-                <span
-                  className={`inline-block transition-all duration-300 ${
-                    slashIn ? 'translate-y-0 opacity-100' : '-translate-y-6 opacity-0'
-                  }`}
-                >
+              <div
+                className="text-[88px] sm:text-[112px] lg:text-[120px] leading-[0.86] text-[#B6F500] tabular-nums"
+                style={{ textShadow: '0 0 26px rgba(182, 245, 0, 0.35)' }}
+              >
+                <span ref={hoursRef}>24</span>
+                <span ref={slashRef} className="inline-block">
                   /
                 </span>
-                <span>{daysNum}</span>
+                <span ref={daysRef}>7</span>
               </div>
               <div
                 ref={accessRef}
@@ -217,8 +222,7 @@ export const MembershipSection: React.FC = () => {
           <div className="lg:col-span-6 flex justify-center lg:justify-end">
             <div ref={cardRef} className="w-full max-w-[360px]">
               <TiltCard maxTilt={5} className="rounded-[24px]">
-                <div className="glass-panel-lime rounded-[24px] p-5 sm:p-6 shadow-[0_24px_60px_rgba(0,0,0,0.75)]">
-                  {/* Card Title with thin lime lines on both sides */}
+                <div className="glass-panel-lime glass-blur rounded-[24px] p-5 sm:p-6 shadow-[0_24px_60px_rgba(0,0,0,0.75)]">
                   <div className="mb-5 flex items-center gap-3">
                     <span className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-[#B6F500]/70" />
                     <h3 className="font-display italic font-extrabold text-[15px] uppercase tracking-[0.14em] text-white whitespace-nowrap">
@@ -227,7 +231,6 @@ export const MembershipSection: React.FC = () => {
                     <span className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-[#B6F500]/70" />
                   </div>
 
-                  {/* Three stacked phase rows — never display gym prices */}
                   <div className="space-y-3">
                     {config.pricingPhases.map((phase) => {
                       const isActive = phase.status === 'Active';
@@ -236,9 +239,9 @@ export const MembershipSection: React.FC = () => {
                       return (
                         <div
                           key={phase.tier}
-                          className={`phase-row group relative flex items-start gap-3.5 rounded-[14px] border p-4 transition-all duration-300 hover:translate-x-1.5 ${
+                          className={`phase-row group relative flex items-start gap-3.5 rounded-[14px] border p-4 transition-[transform,border-color] duration-300 hover:translate-x-1.5 ${
                             isActive
-                              ? 'border-[#B6F500]/60 bg-[#0B0B0C]/95 shadow-[0_0_20px_rgba(182,245,0,0.12)]'
+                              ? 'border-[#B6F500]/60 bg-[#0B0B0C]/95'
                               : 'border-white/[0.07] bg-[#0B0B0C]/85 hover:border-[#B6F500]/45'
                           }`}
                         >
@@ -258,7 +261,7 @@ export const MembershipSection: React.FC = () => {
 
                               {isActive && (
                                 <span className="inline-flex items-center gap-1.5 rounded-full bg-[#B6F500]/15 border border-[#B6F500]/40 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.1em] text-[#B6F500]">
-                                  <span className="h-1.5 w-1.5 rounded-full bg-[#B6F500] animate-ping" />
+                                  <span className="h-1.5 w-1.5 rounded-full bg-[#B6F500] status-ping" />
                                   {config.membershipAvailability.label || 'LIMITED SPOTS'}
                                 </span>
                               )}
@@ -301,4 +304,4 @@ export const MembershipSection: React.FC = () => {
       </div>
     </section>
   );
-};
+});

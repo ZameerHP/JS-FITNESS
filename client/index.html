@@ -23,14 +23,23 @@
         }
       })();
     </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;0,900;1,700;1,800;1,900&family=Inter:wght@400;500;600;700&family=Saira+Condensed:ital,wght@0,800;1,800;1,900&family=Yellowtail&display=swap"
-      rel="stylesheet"
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="/fonts/barlow-condensed-900-italic.woff2"
+      crossorigin
     />
-    <link rel="preload" as="image" href="/images/hero-athlete.webp" />
-    <link rel="preload" as="image" href="/images/hero-bg.webp" />
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      href="/fonts/inter-400-normal.woff2"
+      crossorigin
+    />
+    <link rel="preload" as="image" href="/images/hero-athlete.webp" fetchpriority="high" />
+    <link rel="preload" as="image" href="/images/hero-bg.webp" fetchpriority="high" />
+    <link rel="dns-prefetch" href="https://assets.calendly.com" />
   </head>
   <body class="bg-[#050505] text-white antialiased selection:bg-[#B6F500] selection:text-[#050505]">
     <div id="root"></div>

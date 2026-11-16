@@ -10,6 +10,7 @@ interface DrawPathProps {
   duration?: number;
   className?: string;
   filterId?: string;
+  dualGlow?: boolean;
 }
 
 export const DrawPath: React.FC<DrawPathProps> = ({
@@ -17,27 +18,31 @@ export const DrawPath: React.FC<DrawPathProps> = ({
   stroke = '#B6F500',
   strokeWidth = 3,
   scrub = true,
-  duration = 1.4,
+  duration = 1.2,
   className = '',
-  filterId,
+  dualGlow = true,
 }) => {
   const pathRef = useRef<SVGPathElement>(null);
+  const glowRef = useRef<SVGPathElement>(null);
   const reducedMotion = useReducedMotion();
 
   useEffect(() => {
     const path = pathRef.current;
+    const glow = glowRef.current;
     if (!path) return;
+
     const len = path.getTotalLength();
+    const targets = glow ? [glow, path] : [path];
 
     if (reducedMotion) {
-      gsap.set(path, { strokeDasharray: len, strokeDashoffset: 0 });
+      gsap.set(targets, { strokeDasharray: len, strokeDashoffset: 0 });
       return;
     }
 
-    gsap.set(path, { strokeDasharray: len, strokeDashoffset: len });
+    gsap.set(targets, { strokeDasharray: len, strokeDashoffset: len });
 
     const ctx = gsap.context(() => {
-      gsap.to(path, {
+      gsap.to(targets, {
         strokeDashoffset: 0,
         duration: scrub ? undefined : duration,
         ease: scrub ? 'none' : 'power3.out',
@@ -55,15 +60,26 @@ export const DrawPath: React.FC<DrawPathProps> = ({
   }, [d, scrub, duration, reducedMotion]);
 
   return (
-    <path
-      ref={pathRef}
-      d={d}
-      fill="none"
-      stroke={stroke}
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-      filter={filterId ? `url(#${filterId})` : undefined}
-      className={className}
-    />
+    <g className={className}>
+      {dualGlow && (
+        <path
+          ref={glowRef}
+          d={d}
+          fill="none"
+          stroke={stroke}
+          strokeWidth={strokeWidth * 3.5}
+          strokeOpacity={0.2}
+          strokeLinecap="round"
+        />
+      )}
+      <path
+        ref={pathRef}
+        d={d}
+        fill="none"
+        stroke={stroke}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+    </g>
   );
 };

@@ -25,12 +25,19 @@ export default defineConfig({
       },
     },
   },
+  esbuild: {
+    drop: ['console', 'debugger'],
+  },
   build: {
+    target: 'es2020',
+    sourcemap: false,
+    cssCodeSplit: true,
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          motion: ['framer-motion', 'gsap', 'lenis'],
+          react: ['react', 'react-dom', 'react-router-dom'],
+          gsap: ['gsap'],
+          motion: ['framer-motion'],
           three: ['three', '@react-three/fiber', '@react-three/drei'],
         },
       },

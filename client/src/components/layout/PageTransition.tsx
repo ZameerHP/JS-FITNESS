@@ -1,14 +1,14 @@
 import React, { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { gsap, ScrollTrigger } from '../../lib/gsap';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { scrollToTopImmediate } from '../../hooks/useLenis';
 
-export const PageTransition: React.FC = () => {
+export const PageTransition: React.FC = React.memo(() => {
   const location = useLocation();
   const reducedMotion = useReducedMotion();
+  const overlayRef = useRef<HTMLDivElement>(null);
   const firstMountRef = useRef(true);
-  const [transitioning, setTransitioning] = React.useState(false);
 
   useEffect(() => {
     scrollToTopImmediate();
@@ -18,32 +18,34 @@ export const PageTransition: React.FC = () => {
       return;
     }
 
-    if (reducedMotion) return;
+    // Kill ScrollTriggers of leaving route cleanly
+    ScrollTrigger.getAll().forEach((st) => st.kill());
 
-    setTransitioning(true);
-    const timer = setTimeout(() => {
-      setTransitioning(false);
-    }, 520);
+    if (reducedMotion || !overlayRef.current) return;
 
-    return () => clearTimeout(timer);
+    const el = overlayRef.current;
+    gsap.killTweensOf(el);
+    const tl = gsap.timeline();
+    tl.set(el, { xPercent: -100, display: 'flex' })
+      .to(el, { xPercent: 0, duration: 0.24, ease: 'power3.inOut' })
+      .to(el, { xPercent: 100, duration: 0.26, ease: 'power3.inOut', delay: 0.04 })
+      .set(el, { display: 'none' });
+
+    return () => {
+      tl.kill();
+    };
   }, [location.pathname, reducedMotion]);
 
   return (
-    <AnimatePresence>
-      {transitioning && (
-        <motion.div
-          key={location.pathname}
-          initial={{ x: '-100%' }}
-          animate={{ x: '0%' }}
-          exit={{ x: '100%' }}
-          transition={{ duration: 0.48, ease: [0.87, 0, 0.13, 1] }}
-          className="fixed inset-0 z-[9980] flex items-center justify-center bg-[#B6F500] pointer-events-none"
-        >
-          <div className="font-display italic font-black text-7xl tracking-tighter text-[#050505]">
-            JS
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <div
+      ref={overlayRef}
+      aria-hidden="true"
+      className="fixed inset-0 z-[9980] hidden items-center justify-center bg-[#B6F500] pointer-events-none"
+      style={{ transform: 'translate3d(-100%, 0, 0)' }}
+    >
+      <div className="font-display italic font-black text-7xl tracking-tighter text-[#050505]">
+        JS
+      </div>
+    </div>
   );
-};
+});

@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { siteConfig, SiteConfigData } from '../config/siteConfig';
 import {
   CertificationItem,
@@ -137,24 +137,40 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setActiveCalendly((prev) => ({ ...prev, open: false }));
   }, []);
 
+  const contextValue = useMemo(
+    () => ({
+      config,
+      transformations,
+      testimonials,
+      gallery,
+      videos,
+      certifications,
+      loading,
+      refreshContent,
+      activeCalendly,
+      openBooking,
+      closeBooking,
+      videoModalOpen,
+      setVideoModalOpen,
+    }),
+    [
+      config,
+      transformations,
+      testimonials,
+      gallery,
+      videos,
+      certifications,
+      loading,
+      refreshContent,
+      activeCalendly,
+      openBooking,
+      closeBooking,
+      videoModalOpen,
+    ]
+  );
+
   return (
-    <ContentContext.Provider
-      value={{
-        config,
-        transformations,
-        testimonials,
-        gallery,
-        videos,
-        certifications,
-        loading,
-        refreshContent,
-        activeCalendly,
-        openBooking,
-        closeBooking,
-        videoModalOpen,
-        setVideoModalOpen,
-      }}
-    >
+    <ContentContext.Provider value={contextValue}>
       {children}
     </ContentContext.Provider>
   );

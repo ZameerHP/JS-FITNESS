@@ -10,9 +10,10 @@ import { BookingCardsSection } from '../components/home/BookingCardsSection';
 
 interface HomeProps {
   preloaderDone: boolean;
+  onPrefetchCalendly?: () => void;
 }
 
-export const Home: React.FC<HomeProps> = ({ preloaderDone }) => {
+export const Home: React.FC<HomeProps> = React.memo(({ preloaderDone, onPrefetchCalendly }) => {
   return (
     <>
       <SEOHead
@@ -20,13 +21,15 @@ export const Home: React.FC<HomeProps> = ({ preloaderDone }) => {
         description="More than just a gym membership. 24/7 gym access, custom training & nutrition coaching, and real transformations in Calgary NE."
         path="/"
       />
-      <HeroSection ready={preloaderDone} />
+      <HeroSection ready={preloaderDone} onPrefetchCalendly={onPrefetchCalendly} />
       <FeatureStrip />
       <MembershipSection />
       <SystemSection />
       <TransformationsSection />
       <FounderSection />
-      <BookingCardsSection />
+      <BookingCardsSection onPrefetchCalendly={onPrefetchCalendly} />
     </>
   );
-};
+});
+
+export default Home;
