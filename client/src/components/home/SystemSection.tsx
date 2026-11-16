@@ -3,6 +3,7 @@ import { gsap } from '../../lib/gsap';
 import { HOME_COPY } from '../../config/siteConfig';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useTier } from '../../lib/perfTier';
+import { scheduleChunkedTask } from '../../lib/scheduler';
 import { Button } from '../ui/Button';
 import { SplitReveal } from '../ui/SplitReveal';
 import { JSLogo } from '../ui/JSLogo';
@@ -48,6 +49,7 @@ export const SystemSection: React.FC = React.memo(() => {
     let cometTween: gsap.core.Tween | null = null;
     let jitterInterval: ReturnType<typeof setInterval> | null = null;
     let inView = false;
+    let ctx: gsap.Context | null = null;
 
     if (phoneRef.current) {
       gsap.set(phoneRef.current, { transformPerspective: 1100, rotateY: -6 });
@@ -55,110 +57,6 @@ export const SystemSection: React.FC = React.memo(() => {
       ryToRef.current = gsap.quickTo(phoneRef.current, 'rotateY', { duration: 0.4, ease: 'power3.out' });
     }
 
-    const ctx = gsap.context(() => {
-      floatTween = gsap.to(phoneRef.current, {
-        y: -10,
-        duration: 2.5,
-        repeat: -1,
-        yoyo: true,
-        ease: 'sine.inOut',
-        paused: true,
-      });
-
-      if (orbitCometRef.current) {
-        cometTween = gsap.fromTo(
-          orbitCometRef.current,
-          { strokeDashoffset: 840 },
-          {
-            strokeDashoffset: 0,
-            duration: 4.5,
-            repeat: -1,
-            ease: 'none',
-            paused: true,
-          }
-        );
-      }
-
-      if (tier === 'high' && athleteRef.current) {
-        gsap.fromTo(
-          athleteRef.current,
-          { y: 36 },
-          {
-            y: -30,
-            ease: 'none',
-            scrollTrigger: {
-              trigger: el,
-              start: 'top bottom',
-              end: 'bottom top',
-              scrub: true,
-            },
-          }
-        );
-      }
-
-      if (circle) {
-        gsap.set(circle, {
-          strokeDasharray: circumference,
-          strokeDashoffset: circumference,
-        });
-
-        const obj = { val: 0 };
-        gsap.to(obj, {
-          val: 92,
-          duration: 1.4,
-          ease: 'power3.out',
-          scrollTrigger: {
-            trigger: el,
-            start: 'top 74%',
-            once: true,
-          },
-          onUpdate: () => {
-            const v = Math.round(obj.val);
-            if (pctRef.current) pctRef.current.textContent = `${v}%`;
-            circle.style.strokeDashoffset = String(circumference - (v / 100) * circumference);
-          },
-        });
-      }
-
-      if (checklistRef.current) {
-        const items = checklistRef.current.querySelectorAll('.check-item');
-        gsap.fromTo(
-          items,
-          { x: -16, opacity: 0 },
-          {
-            x: 0,
-            opacity: 1,
-            duration: 0.45,
-            stagger: 0.07,
-            ease: 'power3.out',
-            scrollTrigger: {
-              trigger: checklistRef.current,
-              start: 'top 86%',
-              once: true,
-            },
-          }
-        );
-      }
-
-      const bars = el.querySelectorAll('.mockup-bar');
-      gsap.fromTo(
-        bars,
-        { scaleY: 0 },
-        {
-          scaleY: 1,
-          duration: 0.55,
-          stagger: 0.03,
-          ease: 'power3.out',
-          scrollTrigger: {
-            trigger: phoneRef.current,
-            start: 'top 84%',
-            once: true,
-          },
-        }
-      );
-    }, el);
-
-    // Only run ambient float/comet/bar jitter while SystemSection is visible and tab is active
     const bars = Array.from(el.querySelectorAll<HTMLElement>('.mockup-bar'));
     const syncLoops = () => {
       const shouldRun = inView && !document.hidden;
@@ -184,6 +82,116 @@ export const SystemSection: React.FC = React.memo(() => {
       }
     };
 
+    const cancelTask = scheduleChunkedTask(() => {
+      ctx = gsap.context(() => {
+        floatTween = gsap.to(phoneRef.current, {
+          y: -10,
+          duration: 2.5,
+          repeat: -1,
+          yoyo: true,
+          ease: 'sine.inOut',
+          paused: true,
+        });
+
+        if (orbitCometRef.current) {
+          cometTween = gsap.fromTo(
+            orbitCometRef.current,
+            { strokeDashoffset: 840 },
+            {
+              strokeDashoffset: 0,
+              duration: 4.5,
+              repeat: -1,
+              ease: 'none',
+              paused: true,
+            }
+          );
+        }
+
+        if (tier === 'high' && athleteRef.current) {
+          gsap.fromTo(
+            athleteRef.current,
+            { y: 36 },
+            {
+              y: -30,
+              ease: 'none',
+              scrollTrigger: {
+                trigger: el,
+                start: 'top bottom',
+                end: 'bottom top',
+                scrub: true,
+              },
+            }
+          );
+        }
+
+        if (circle) {
+          gsap.set(circle, {
+            strokeDasharray: circumference,
+            strokeDashoffset: circumference,
+          });
+
+          const obj = { val: 0 };
+          let lastPct = -1;
+          gsap.to(obj, {
+            val: 92,
+            duration: 1.4,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: el,
+              start: 'top 74%',
+              once: true,
+            },
+            onUpdate: () => {
+              const v = Math.round(obj.val);
+              if (v !== lastPct) {
+                lastPct = v;
+                if (pctRef.current) pctRef.current.textContent = `${v}%`;
+                circle.style.strokeDashoffset = String(circumference - (v / 100) * circumference);
+              }
+            },
+          });
+        }
+
+        if (checklistRef.current) {
+          const items = checklistRef.current.querySelectorAll('.check-item');
+          gsap.fromTo(
+            items,
+            { x: -16, opacity: 0 },
+            {
+              x: 0,
+              opacity: 1,
+              duration: 0.45,
+              stagger: 0.07,
+              ease: 'power3.out',
+              scrollTrigger: {
+                trigger: checklistRef.current,
+                start: 'top 86%',
+                once: true,
+              },
+            }
+          );
+        }
+
+        const barNodes = el.querySelectorAll('.mockup-bar');
+        gsap.fromTo(
+          barNodes,
+          { scaleY: 0 },
+          {
+            scaleY: 1,
+            duration: 0.55,
+            stagger: 0.03,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: phoneRef.current,
+              start: 'top 84%',
+              once: true,
+            },
+          }
+        );
+      }, el);
+      syncLoops();
+    });
+
     const io = new IntersectionObserver(
       (entries) => {
         inView = Boolean(entries[0]?.isIntersecting);
@@ -195,10 +203,11 @@ export const SystemSection: React.FC = React.memo(() => {
     document.addEventListener('visibilitychange', syncLoops);
 
     return () => {
+      cancelTask();
       io.disconnect();
       document.removeEventListener('visibilitychange', syncLoops);
       if (jitterInterval) clearInterval(jitterInterval);
-      ctx.revert();
+      ctx?.revert();
     };
   }, [reducedMotion, tier]);
 

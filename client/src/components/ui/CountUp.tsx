@@ -1,5 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
+import { gsap } from '../../lib/gsap';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { useTier } from '../../lib/perfTier';
 
 interface CountUpProps {
   end: number;
@@ -10,58 +12,60 @@ interface CountUpProps {
   className?: string;
 }
 
-export const CountUp: React.FC<CountUpProps> = ({
-  end,
-  decimals = 0,
-  prefix = '',
-  suffix = '',
-  duration = 1400,
-  className = '',
-}) => {
-  const ref = useRef<HTMLSpanElement>(null);
-  const reducedMotion = useReducedMotion();
-  const [display, setDisplay] = useState<string>(
-    reducedMotion ? `${prefix}${end.toFixed(decimals)}${suffix}` : `${prefix}${(0).toFixed(decimals)}${suffix}`
-  );
-  const startedRef = useRef(false);
+export const CountUp: React.FC<CountUpProps> = React.memo(
+  ({ end, decimals = 0, prefix = '', suffix = '', duration = 1400, className = '' }) => {
+    const ref = useRef<HTMLSpanElement>(null);
+    const reducedMotion = useReducedMotion();
+    const tier = useTier();
+    const initialText = `${prefix}${end.toFixed(decimals)}${suffix}`;
 
-  useEffect(() => {
-    if (reducedMotion) {
-      setDisplay(`${prefix}${end.toFixed(decimals)}${suffix}`);
-      return;
-    }
+    useEffect(() => {
+      const el = ref.current;
+      if (!el) return;
 
-    const el = ref.current;
-    if (!el) return;
+      if (reducedMotion || tier === 'low') {
+        el.textContent = `${prefix}${end.toFixed(decimals)}${suffix}`;
+        return;
+      }
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && !startedRef.current) {
-            startedRef.current = true;
-            const start = performance.now();
-            const tick = (now: number) => {
-              const progress = Math.min(1, (now - start) / duration);
-              const eased = 1 - Math.pow(1 - progress, 3);
-              const value = end * eased;
-              setDisplay(`${prefix}${value.toFixed(decimals)}${suffix}`);
-              if (progress < 1) requestAnimationFrame(tick);
-            };
-            requestAnimationFrame(tick);
+      let tween: gsap.core.Tween | null = null;
+      let started = false;
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (entries[0]?.isIntersecting && !started) {
+            started = true;
             observer.disconnect();
+            const state = { val: 0 };
+            let lastText = '';
+            tween = gsap.to(state, {
+              val: end,
+              duration: duration / 1000,
+              ease: 'power3.out',
+              onUpdate: () => {
+                const next = `${prefix}${state.val.toFixed(decimals)}${suffix}`;
+                if (next !== lastText) {
+                  lastText = next;
+                  el.textContent = next;
+                }
+              },
+            });
           }
-        });
-      },
-      { threshold: 0.2 }
+        },
+        { threshold: 0.2 }
+      );
+
+      observer.observe(el);
+      return () => {
+        observer.disconnect();
+        tween?.kill();
+      };
+    }, [end, decimals, prefix, suffix, duration, reducedMotion, tier]);
+
+    return (
+      <span ref={ref} className={className}>
+        {initialText}
+      </span>
     );
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [end, decimals, prefix, suffix, duration, reducedMotion]);
-
-  return (
-    <span ref={ref} className={className}>
-      {display}
-    </span>
-  );
-};
+  }
+);

@@ -4,7 +4,7 @@ import { gsap } from '../../lib/gsap';
 import { HOME_COPY } from '../../config/siteConfig';
 import { useSiteContent } from '../../context/ContentContext';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { useTier } from '../../lib/perfTier';
+import { useTier, hasHardwareWebGL } from '../../lib/perfTier';
 import { subscribePointerTick } from '../../lib/pointer';
 import { Button } from '../ui/Button';
 import { SplitReveal } from '../ui/SplitReveal';
@@ -75,25 +75,39 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
       };
     }, []);
 
-    // Mount Three.js particles ONLY after preloader completes and main thread is idle
+    // Mount Three.js particles ONLY on hardware-WebGL desktop high tier after 3s idle delay
     useEffect(() => {
-      if (!ready || reducedMotion || tier === 'low') {
+      if (!ready || reducedMotion || tier !== 'high' || isMobile || !hasHardwareWebGL()) {
         setMountParticles(false);
         return;
       }
 
+      let cancelled = false;
+      let idleId: number | undefined;
       const w = window as Window & {
         requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
         cancelIdleCallback?: (id: number) => void;
       };
 
-      if (w.requestIdleCallback) {
-        const id = w.requestIdleCallback(() => setMountParticles(true), { timeout: 500 });
-        return () => w.cancelIdleCallback?.(id);
-      }
-      const t = setTimeout(() => setMountParticles(true), 150);
-      return () => clearTimeout(t);
-    }, [ready, reducedMotion, tier]);
+      const timerId = window.setTimeout(() => {
+        if (w.requestIdleCallback) {
+          idleId = w.requestIdleCallback(
+            () => {
+              if (!cancelled) setMountParticles(true);
+            },
+            { timeout: 1000 }
+          );
+        } else if (!cancelled) {
+          setMountParticles(true);
+        }
+      }, 3000);
+
+      return () => {
+        cancelled = true;
+        clearTimeout(timerId);
+        if (idleId !== undefined) w.cancelIdleCallback?.(idleId);
+      };
+    }, [ready, reducedMotion, tier, isMobile]);
 
     // Single global pointer subscription via GSAP quickTo (zero extra RAF, zero React re-renders)
     useEffect(() => {
@@ -165,47 +179,49 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
           tl.to(polyTargets, { strokeDashoffset: 0, opacity: 1, duration: 1.3, ease: 'power3.out' }, 0.1);
         }
 
-        // GPU-only athlete entrance (no expensive filter: blur(12px) on 1100px bitmap)
+        // GPU-only athlete entrance keeping opacity: 1 for immediate LCP paint
         if (athleteImgRef.current && !isMobile) {
           tl.fromTo(
             athleteImgRef.current,
-            { y: 45, opacity: 0, scale: 0.985 },
-            { y: 0, opacity: 1, scale: 1, duration: 0.95, ease: 'power3.out' },
-            0.15
+            { y: 28, scale: 0.985 },
+            { y: 0, scale: 1, duration: 0.85, ease: 'power3.out' },
+            0.12
           );
         }
 
-        tl.fromTo(
-          sublineRef.current,
-          { opacity: 0, y: 10 },
-          { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' },
-          0.55
-        );
+        if (tier === 'high') {
+          tl.fromTo(
+            sublineRef.current,
+            { opacity: 0, y: 10 },
+            { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' },
+            0.55
+          );
 
-        if (buttonsRef.current) {
-          tl.fromTo(
-            buttonsRef.current.children,
-            { scale: 0.92, opacity: 0, y: 14 },
-            { scale: 1, opacity: 1, y: 0, duration: 0.55, stagger: 0.1, ease: 'back.out(1.3)' },
-            0.65
-          );
-        }
+          if (buttonsRef.current) {
+            tl.fromTo(
+              buttonsRef.current.children,
+              { scale: 0.92, opacity: 0, y: 14 },
+              { scale: 1, opacity: 1, y: 0, duration: 0.55, stagger: 0.1, ease: 'back.out(1.3)' },
+              0.65
+            );
+          }
 
-        if (rightTaglineRef.current) {
-          tl.fromTo(
-            rightTaglineRef.current.querySelectorAll('.tagline-line'),
-            { y: 18, opacity: 0 },
-            { y: 0, opacity: 1, duration: 0.45, stagger: 0.08, ease: 'power3.out' },
-            0.6
-          );
-        }
-        if (rightUnderlineRef.current) {
-          tl.fromTo(
-            rightUnderlineRef.current,
-            { scaleX: 0 },
-            { scaleX: 1, duration: 0.5, ease: 'power3.out' },
-            0.9
-          );
+          if (rightTaglineRef.current) {
+            tl.fromTo(
+              rightTaglineRef.current.querySelectorAll('.tagline-line'),
+              { y: 18, opacity: 0 },
+              { y: 0, opacity: 1, duration: 0.45, stagger: 0.08, ease: 'power3.out' },
+              0.6
+            );
+          }
+          if (rightUnderlineRef.current) {
+            tl.fromTo(
+              rightUnderlineRef.current,
+              { scaleX: 0 },
+              { scaleX: 1, duration: 0.5, ease: 'power3.out' },
+              0.9
+            );
+          }
         }
 
         if (tier === 'high') {
@@ -266,8 +282,8 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
           />
         </div>
 
-        {/* Layer 2: Lazy-loaded GPU Shader Three.js particles (only mounted when ready & idle) */}
-        {mountParticles && tier !== 'low' && !reducedMotion && (
+        {/* Layer 2: Lazy-loaded GPU Shader Three.js particles (only mounted when high + hw WebGL + idle) */}
+        {mountParticles && tier === 'high' && !isMobile && !reducedMotion && (
           <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[1]">
             <Suspense fallback={null}>
               <HeroParticlesCanvas

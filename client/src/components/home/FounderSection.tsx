@@ -3,6 +3,7 @@ import { gsap } from '../../lib/gsap';
 import { HOME_COPY } from '../../config/siteConfig';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useTier } from '../../lib/perfTier';
+import { scheduleChunkedTask } from '../../lib/scheduler';
 import { Button } from '../ui/Button';
 import { SplitReveal } from '../ui/SplitReveal';
 
@@ -21,69 +22,75 @@ export const FounderSection: React.FC = React.memo(() => {
     const el = sectionRef.current;
     if (!el || reducedMotion || tier === 'low') return;
 
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        [topLineRef.current, bottomLineRef.current],
-        { scaleX: 0 },
-        {
-          scaleX: 1,
-          duration: 0.9,
-          ease: 'power3.out',
-          scrollTrigger: { trigger: el, start: 'top 84%', once: true },
-        }
-      );
-
-      gsap.fromTo(
-        photoWrapRef.current,
-        { opacity: 0, x: -24 },
-        {
-          opacity: 1,
-          x: 0,
-          duration: 0.9,
-          ease: 'power3.out',
-          scrollTrigger: { trigger: el, start: 'top 80%', once: true },
-        }
-      );
-
-      gsap.fromTo(
-        photoImgRef.current,
-        { scale: 1.08 },
-        {
-          scale: 1,
-          duration: 1.1,
-          ease: 'power3.out',
-          scrollTrigger: { trigger: el, start: 'top 80%', once: true },
-        }
-      );
-
-      if (neonOverlayRef.current && tier === 'high') {
-        const flickerTl = gsap.timeline({
-          scrollTrigger: { trigger: el, start: 'top 74%', once: true },
-        });
-        flickerTl
-          .to(neonOverlayRef.current, { opacity: 0.9, duration: 0.08 })
-          .to(neonOverlayRef.current, { opacity: 0.2, duration: 0.06 })
-          .to(neonOverlayRef.current, { opacity: 0.95, duration: 0.07 })
-          .to(neonOverlayRef.current, { opacity: 0.35, duration: 0.08 })
-          .to(neonOverlayRef.current, { opacity: 0.75, duration: 0.35 });
-      }
-
-      if (scriptRef.current) {
+    let ctx: gsap.Context | null = null;
+    const cancelTask = scheduleChunkedTask(() => {
+      ctx = gsap.context(() => {
         gsap.fromTo(
-          scriptRef.current,
-          { x: -16, opacity: 0 },
+          [topLineRef.current, bottomLineRef.current],
+          { scaleX: 0 },
           {
-            x: 0,
-            opacity: 1,
-            duration: 0.85,
-            ease: 'power2.out',
-            scrollTrigger: { trigger: scriptRef.current, start: 'top 86%', once: true },
+            scaleX: 1,
+            duration: 0.9,
+            ease: 'power3.out',
+            scrollTrigger: { trigger: el, start: 'top 84%', once: true },
           }
         );
-      }
-    }, el);
 
-    return () => ctx.revert();
+        gsap.fromTo(
+          photoWrapRef.current,
+          { opacity: 0, x: -24 },
+          {
+            opacity: 1,
+            x: 0,
+            duration: 0.9,
+            ease: 'power3.out',
+            scrollTrigger: { trigger: el, start: 'top 80%', once: true },
+          }
+        );
+
+        gsap.fromTo(
+          photoImgRef.current,
+          { scale: 1.08 },
+          {
+            scale: 1,
+            duration: 1.1,
+            ease: 'power3.out',
+            scrollTrigger: { trigger: el, start: 'top 80%', once: true },
+          }
+        );
+
+        if (neonOverlayRef.current && tier === 'high') {
+          const flickerTl = gsap.timeline({
+            scrollTrigger: { trigger: el, start: 'top 74%', once: true },
+          });
+          flickerTl
+            .to(neonOverlayRef.current, { opacity: 0.9, duration: 0.08 })
+            .to(neonOverlayRef.current, { opacity: 0.2, duration: 0.06 })
+            .to(neonOverlayRef.current, { opacity: 0.95, duration: 0.07 })
+            .to(neonOverlayRef.current, { opacity: 0.35, duration: 0.08 })
+            .to(neonOverlayRef.current, { opacity: 0.75, duration: 0.35 });
+        }
+
+        if (scriptRef.current) {
+          gsap.fromTo(
+            scriptRef.current,
+            { x: -16, opacity: 0 },
+            {
+              x: 0,
+              opacity: 1,
+              duration: 0.85,
+              ease: 'power2.out',
+              scrollTrigger: { trigger: scriptRef.current, start: 'top 86%', once: true },
+            }
+          );
+        }
+      }, el);
+    });
+
+    return () => {
+      cancelTask();
+      ctx?.revert();
+    };
   }, [reducedMotion, tier]);
 
   return (

@@ -5,6 +5,7 @@ import { HOME_COPY } from '../../config/siteConfig';
 import { useSiteContent } from '../../context/ContentContext';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useTier } from '../../lib/perfTier';
+import { scheduleChunkedTask } from '../../lib/scheduler';
 import { Button } from '../ui/Button';
 import { TiltCard } from '../ui/TiltCard';
 import { CountUp } from '../ui/CountUp';
@@ -30,51 +31,9 @@ export const BookingCardsSection: React.FC<BookingCardsSectionProps> = React.mem
 
       let floatD: gsap.core.Tween | null = null;
       let floatS: gsap.core.Tween | null = null;
-
-      const ctx = gsap.context(() => {
-        if (cardsRef.current) {
-          gsap.fromTo(
-            cardsRef.current.children,
-            { y: 36, opacity: 0 },
-            {
-              y: 0,
-              opacity: 1,
-              duration: 0.7,
-              stagger: 0.14,
-              ease: 'power3.out',
-              scrollTrigger: {
-                trigger: cardsRef.current,
-                start: 'top 86%',
-                once: true,
-              },
-            }
-          );
-        }
-
-        if (tier === 'high') {
-          floatD = gsap.to(dumbbellsRef.current, {
-            y: -8,
-            rotation: 2,
-            duration: 2.8,
-            repeat: -1,
-            yoyo: true,
-            ease: 'sine.inOut',
-            paused: true,
-          });
-
-          floatS = gsap.to(shakerRef.current, {
-            y: -8,
-            rotation: -2,
-            duration: 3.1,
-            repeat: -1,
-            yoyo: true,
-            ease: 'sine.inOut',
-            paused: true,
-          });
-        }
-      }, el);
-
+      let ctx: gsap.Context | null = null;
       let inView = false;
+
       const sync = () => {
         if (inView && !document.hidden) {
           floatD?.play();
@@ -84,6 +43,52 @@ export const BookingCardsSection: React.FC<BookingCardsSectionProps> = React.mem
           floatS?.pause();
         }
       };
+
+      const cancelTask = scheduleChunkedTask(() => {
+        ctx = gsap.context(() => {
+          if (cardsRef.current) {
+            gsap.fromTo(
+              cardsRef.current.children,
+              { y: 36, opacity: 0 },
+              {
+                y: 0,
+                opacity: 1,
+                duration: 0.7,
+                stagger: 0.14,
+                ease: 'power3.out',
+                scrollTrigger: {
+                  trigger: cardsRef.current,
+                  start: 'top 86%',
+                  once: true,
+                },
+              }
+            );
+          }
+
+          if (tier === 'high') {
+            floatD = gsap.to(dumbbellsRef.current, {
+              y: -8,
+              rotation: 2,
+              duration: 2.8,
+              repeat: -1,
+              yoyo: true,
+              ease: 'sine.inOut',
+              paused: true,
+            });
+
+            floatS = gsap.to(shakerRef.current, {
+              y: -8,
+              rotation: -2,
+              duration: 3.1,
+              repeat: -1,
+              yoyo: true,
+              ease: 'sine.inOut',
+              paused: true,
+            });
+          }
+        }, el);
+        sync();
+      });
 
       const io = new IntersectionObserver(
         (entries) => {
@@ -96,9 +101,10 @@ export const BookingCardsSection: React.FC<BookingCardsSectionProps> = React.mem
       document.addEventListener('visibilitychange', sync);
 
       return () => {
+        cancelTask();
         io.disconnect();
         document.removeEventListener('visibilitychange', sync);
-        ctx.revert();
+        ctx?.revert();
       };
     }, [reducedMotion, tier]);
 

@@ -5,6 +5,7 @@ import { gsap } from '../../lib/gsap';
 import { useSiteContent } from '../../context/ContentContext';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useTier } from '../../lib/perfTier';
+import { scheduleChunkedTask } from '../../lib/scheduler';
 import { JSLogo } from '../ui/JSLogo';
 import { Magnetic } from '../ui/Magnetic';
 
@@ -23,20 +24,27 @@ export const Footer: React.FC = React.memo(() => {
 
   useEffect(() => {
     if (reducedMotion || tier === 'low' || !plateRef.current || !footerRef.current) return;
-    const ctx = gsap.context(() => {
-      gsap.to(plateRef.current, {
-        rotation: 90,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: footerRef.current,
-          start: 'top bottom',
-          end: 'bottom bottom',
-          scrub: true,
-        },
-      });
-    }, footerRef);
+    let ctx: gsap.Context | null = null;
+    const cancelTask = scheduleChunkedTask(() => {
+      if (!plateRef.current || !footerRef.current) return;
+      ctx = gsap.context(() => {
+        gsap.to(plateRef.current, {
+          rotation: 90,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: footerRef.current,
+            start: 'top bottom',
+            end: 'bottom bottom',
+            scrub: true,
+          },
+        });
+      }, footerRef);
+    });
 
-    return () => ctx.revert();
+    return () => {
+      cancelTask();
+      ctx?.revert();
+    };
   }, [reducedMotion, tier]);
 
   const socialItems = [

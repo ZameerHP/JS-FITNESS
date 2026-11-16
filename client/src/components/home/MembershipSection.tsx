@@ -5,6 +5,7 @@ import { HOME_COPY, PricingPhase } from '../../config/siteConfig';
 import { useSiteContent } from '../../context/ContentContext';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useTier } from '../../lib/perfTier';
+import { scheduleChunkedTask } from '../../lib/scheduler';
 import { Button } from '../ui/Button';
 import { DrawPath } from '../ui/DrawPath';
 import { TiltCard } from '../ui/TiltCard';
@@ -43,95 +44,111 @@ export const MembershipSection: React.FC = React.memo(() => {
       return;
     }
 
-    const ctx = gsap.context(() => {
-      if (tier === 'high' && bgRef.current) {
-        gsap.fromTo(
-          bgRef.current,
-          { scale: 1.04 },
-          {
-            scale: 1.14,
-            ease: 'none',
-            scrollTrigger: {
-              trigger: el,
-              start: 'top bottom',
-              end: 'bottom top',
-              scrub: true,
-            },
-          }
-        );
-      }
+    let ctx: gsap.Context | null = null;
+    const cancelTask = scheduleChunkedTask(() => {
+      ctx = gsap.context(() => {
+        if (tier === 'high' && bgRef.current) {
+          gsap.fromTo(
+            bgRef.current,
+            { scale: 1.04 },
+            {
+              scale: 1.14,
+              ease: 'none',
+              scrollTrigger: {
+                trigger: el,
+                start: 'top bottom',
+                end: 'bottom top',
+                scrub: true,
+              },
+            }
+          );
+        }
 
-      const odometer = { h: 0, d: 0 };
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: el,
-          start: 'top 76%',
-          once: true,
-        },
-      });
+        const odometer = { h: 0, d: 0 };
+        let lastH = -1;
+        let lastD = -1;
+        const tl = gsap.timeline({
+          scrollTrigger: {
+            trigger: el,
+            start: 'top 76%',
+            once: true,
+          },
+        });
 
-      tl.to(odometer, {
-        h: 24,
-        d: 7,
-        duration: 0.8,
-        ease: 'power3.out',
-        onUpdate: () => {
-          if (hoursRef.current) hoursRef.current.textContent = String(Math.round(odometer.h));
-          if (daysRef.current) daysRef.current.textContent = String(Math.round(odometer.d));
-        },
-      })
-        .fromTo(
-          slashRef.current,
-          { y: -20, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
-          0.3
-        )
-        .fromTo(
-          accessRef.current,
-          { x: -24, opacity: 0 },
-          { x: 0, opacity: 1, duration: 0.7, ease: 'power3.out' },
-          0.3
-        );
+        tl.to(odometer, {
+          h: 24,
+          d: 7,
+          duration: 0.8,
+          ease: 'power3.out',
+          onUpdate: () => {
+            const h = Math.round(odometer.h);
+            const d = Math.round(odometer.d);
+            if (h !== lastH && hoursRef.current) {
+              lastH = h;
+              hoursRef.current.textContent = String(h);
+            }
+            if (d !== lastD && daysRef.current) {
+              lastD = d;
+              daysRef.current.textContent = String(d);
+            }
+          },
+        })
+          .fromTo(
+            slashRef.current,
+            { y: -20, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
+            0.3
+          )
+          .fromTo(
+            accessRef.current,
+            { x: -24, opacity: 0 },
+            { x: 0, opacity: 1, duration: 0.7, ease: 'power3.out' },
+            0.3
+          );
 
-      if (cardRef.current) {
-        gsap.fromTo(
-          cardRef.current,
-          { x: 45, opacity: 0 },
-          {
-            x: 0,
-            opacity: 1,
-            duration: 0.75,
-            ease: 'power3.out',
-            scrollTrigger: {
-              trigger: cardRef.current,
-              start: 'top 84%',
-              once: true,
-            },
-          }
-        );
+        if (cardRef.current) {
+          gsap.fromTo(
+            cardRef.current,
+            { x: 45, opacity: 0 },
+            {
+              x: 0,
+              opacity: 1,
+              duration: 0.75,
+              ease: 'power3.out',
+              scrollTrigger: {
+                trigger: cardRef.current,
+                start: 'top 84%',
+                once: true,
+              },
+            }
+          );
 
-        const rows = cardRef.current.querySelectorAll('.phase-row');
-        gsap.fromTo(
-          rows,
-          { y: 16, opacity: 0 },
-          {
-            y: 0,
-            opacity: 1,
-            duration: 0.45,
-            stagger: 0.1,
-            delay: 0.15,
-            ease: 'power3.out',
-            scrollTrigger: {
-              trigger: cardRef.current,
-              start: 'top 84%',
-              once: true,
-            },
-          }
-        );
-      }
-    }, el);
+          const rows = cardRef.current.querySelectorAll('.phase-row');
+          gsap.fromTo(
+            rows,
+            { y: 16, opacity: 0 },
+            {
+              y: 0,
+              opacity: 1,
+              duration: 0.45,
+              stagger: 0.1,
+              delay: 0.15,
+              ease: 'power3.out',
+              scrollTrigger: {
+                trigger: cardRef.current,
+                start: 'top 84%',
+                once: true,
+              },
+            }
+          );
+        }
+      }, el);
+    });
 
-    return () => ctx.revert();
+    return () => {
+      cancelTask();
+      ctx?.revert();
+    };
   }, [reducedMotion, tier]);
 
   return (

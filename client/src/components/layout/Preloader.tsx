@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { gsap } from '../../lib/gsap';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { startPerfWatchdog, useTier } from '../../lib/perfTier';
+import { startPerfWatchdog, useTier, hasHardwareWebGL } from '../../lib/perfTier';
 
 interface PreloaderProps {
   onComplete: () => void;
@@ -14,7 +14,14 @@ export const Preloader: React.FC<PreloaderProps> = ({ onComplete }) => {
   const tier = useTier();
   const [visible, setVisible] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
-    return !sessionStorage.getItem(SESSION_KEY);
+    if (sessionStorage.getItem(SESSION_KEY)) return false;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+    const t = document.documentElement.dataset.perf || 'high';
+    if (t !== 'high' || !hasHardwareWebGL()) {
+      sessionStorage.setItem(SESSION_KEY, '1');
+      return false;
+    }
+    return true;
   });
 
   const rootRef = useRef<HTMLDivElement>(null);
@@ -102,6 +109,7 @@ export const Preloader: React.FC<PreloaderProps> = ({ onComplete }) => {
       // Update counter & plates directly on DOM refs (zero React re-renders)
       const counterObj = { val: 0 };
       const plateEls = platesRef.current?.querySelectorAll<HTMLElement>('[data-plate]') || [];
+      let lastCount = -1;
       let lastPlates = 0;
 
       tl.to(
@@ -112,7 +120,10 @@ export const Preloader: React.FC<PreloaderProps> = ({ onComplete }) => {
           ease: 'power2.inOut',
           onUpdate: () => {
             const v = Math.round(counterObj.val);
-            if (countRef.current) countRef.current.textContent = String(v).padStart(3, '0');
+            if (v !== lastCount) {
+              lastCount = v;
+              if (countRef.current) countRef.current.textContent = String(v).padStart(3, '0');
+            }
             const pCount = Math.floor(v / 25);
             if (pCount !== lastPlates) {
               lastPlates = pCount;

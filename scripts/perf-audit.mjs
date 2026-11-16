@@ -171,7 +171,7 @@ async function measureScrollAndHeap(browser) {
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(1400);
 
-  // Measure frame deltas during steady top-to-bottom scroll under 4x CPU throttle
+  // Measure frame deltas during steady rAF top-to-bottom scroll under 4x CPU throttle
   const scrollReport = await page.evaluate(async () => {
     const frameDeltas = [];
     const longTasks = [];
@@ -185,23 +185,30 @@ async function measureScrollAndHeap(browser) {
       obs.observe({ type: 'longtask', buffered: false });
     } catch {}
 
-    let running = true;
-    let prev = performance.now();
-    const recordFrame = (now) => {
-      frameDeltas.push(now - prev);
-      prev = now;
-      if (running) requestAnimationFrame(recordFrame);
-    };
-    requestAnimationFrame(recordFrame);
-
     const maxScroll = Math.max(2500, document.documentElement.scrollHeight - window.innerHeight);
-    const steps = 65;
-    for (let i = 1; i <= steps; i++) {
-      window.scrollTo(0, Math.round((maxScroll * i) / steps));
-      await new Promise((r) => setTimeout(r, 42));
-    }
-    await new Promise((r) => setTimeout(r, 400));
-    running = false;
+    await new Promise((resolve) => {
+      let prev = performance.now();
+      let currentY = 0;
+      const durationMs = 2400;
+      const start = prev;
+
+      const step = (now) => {
+        frameDeltas.push(now - prev);
+        prev = now;
+        const progress = Math.min(1, (now - start) / durationMs);
+        const targetY = Math.round(maxScroll * progress);
+        if (targetY !== currentY) {
+          window.scrollTo(0, targetY);
+          currentY = targetY;
+        }
+        if (progress < 1) {
+          requestAnimationFrame(step);
+        } else {
+          setTimeout(resolve, 250);
+        }
+      };
+      requestAnimationFrame(step);
+    });
     obs?.disconnect();
 
     const valid = frameDeltas.slice(2);
@@ -221,39 +228,56 @@ async function measureScrollAndHeap(browser) {
     };
   });
 
-  // Reset CPU throttle for navigation heap test & extract HUD metrics
+  // Reset CPU throttle for INP tap probe & SPA route leak check
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(200);
+  await page.locator('header nav a[href="/membership"]').click();
+  await page.waitForTimeout(300);
+  await page.locator('header a[aria-label="JS FITNESS INC Home"]').click();
+  await page.waitForTimeout(350);
   const hudText = await page.locator('aside[aria-label="Performance Telemetry Overlay"]').innerText().catch(() => '');
 
-  // Measure idle CPU over 1.5s static screen (long tasks + rAF work)
+  // Measure idle CPU over 1.5s static screen (long tasks + scripting work)
   const idleCheck = await page.evaluate(async () => {
+    const idleLongTasks = [];
+    let obs;
+    try {
+      obs = new PerformanceObserver((list) => {
+        for (const e of list.getEntries()) {
+          if (e.duration > 50) idleLongTasks.push(e.duration);
+        }
+      });
+      obs.observe({ type: 'longtask', buffered: false });
+    } catch {}
     const start = performance.now();
-    let count = 0;
-    let active = true;
-    const step = () => {
-      count += 1;
-      if (active) requestAnimationFrame(step);
+    await new Promise((r) => setTimeout(r, 1500));
+    obs?.disconnect();
+    return {
+      durationMs: +(performance.now() - start).toFixed(1),
+      idleLongTasks: idleLongTasks.length,
     };
-    requestAnimationFrame(step);
-    await new Promise((r) => setTimeout(r, 1000));
-    active = false;
-    return { durationMs: +(performance.now() - start).toFixed(1), rAFTicks: count };
   });
 
-  // 10-loop route navigation heap leak check
+  // 10-loop SPA route navigation heap leak check (real React Router mount/unmount)
   await cdp.send('Performance.enable');
   await cdp.send('HeapProfiler.enable');
   await cdp.send('HeapProfiler.collectGarbage');
   const m1 = await cdp.send('Performance.getMetrics');
   const startHeap = m1.metrics.find((m) => m.name === 'JSHeapUsedSize')?.value || 0;
 
-  const navRoutes = ['/about', '/membership', '/system', '/transformations', '/contact', '/'];
-  for (let loop = 0; loop < 3; loop++) {
-    for (const r of navRoutes) {
-      await page.goto(`${BASE_URL}${r}`, { waitUntil: 'domcontentloaded' });
-      await page.waitForTimeout(160);
+  const navHrefs = ['/about', '/membership', '/system', '/transformations', '/contact', '/'];
+  for (let loop = 0; loop < 10; loop++) {
+    for (const href of navHrefs) {
+      if (href === '/') {
+        await page.locator('header a[aria-label="JS FITNESS INC Home"]').click();
+      } else {
+        await page.locator(`header nav a[href="${href}"]`).click();
+      }
+      await page.waitForTimeout(80);
     }
   }
+  await page.waitForTimeout(250);
   await cdp.send('HeapProfiler.collectGarbage');
   const m2 = await cdp.send('Performance.getMetrics');
   const endHeap = m2.metrics.find((m) => m.name === 'JSHeapUsedSize')?.value || 0;
@@ -297,6 +321,7 @@ async function runLighthouse(chromePath) {
       },
     });
     const lhr = result.lhr;
+    const longTaskAudit = lhr.audits['long-tasks']?.details?.items || [];
     return {
       performanceScore: Math.round((lhr.categories.performance.score || 0) * 100),
       accessibilityScore: Math.round((lhr.categories.accessibility.score || 0) * 100),
@@ -306,6 +331,12 @@ async function runLighthouse(chromePath) {
       tbtMs: Math.round(lhr.audits['total-blocking-time']?.numericValue || 0),
       fcpMs: Math.round(lhr.audits['first-contentful-paint']?.numericValue || 0),
       speedIndexMs: Math.round(lhr.audits['speed-index']?.numericValue || 0),
+      lcpElement: lhr.audits['largest-contentful-paint-element']?.details?.items?.[0]?.items?.[0]?.node?.snippet || lhr.audits['largest-contentful-paint-element']?.details?.items?.[0]?.node?.snippet || '',
+      topLongTasks: longTaskAudit.slice(0, 5).map((t) => ({
+        url: t.url,
+        durationMs: Math.round(t.duration || 0),
+        startTimeMs: Math.round(t.startTime || 0),
+      })),
     };
   } finally {
     await chrome.kill();

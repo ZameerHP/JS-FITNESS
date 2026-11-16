@@ -239,10 +239,8 @@ html[data-perf='medium'] .navbar-scrolled {
   }
 }
 
-/* Below-the-fold layout/paint skip */
+/* Below-the-fold layout/paint containment without content-visibility auto mid-scroll thrash */
 .cv-section {
-  content-visibility: auto;
-  contain-intrinsic-size: 1px 720px;
   contain: layout paint style;
 }
 

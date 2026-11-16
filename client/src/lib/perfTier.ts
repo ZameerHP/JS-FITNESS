@@ -5,13 +5,53 @@ export type PerfTier = 'high' | 'medium' | 'low';
 
 export function detectTier(): PerfTier {
   if (typeof window === 'undefined') return 'high';
-  const touch = window.matchMedia('(pointer: coarse)').matches;
+  const touch = window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768;
   const cores = navigator.hardwareConcurrency || 4;
   const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory || 4;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (reduce || cores <= 2 || mem <= 2) return 'low';
   if (touch || cores <= 4 || mem <= 4) return 'medium';
   return 'high';
+}
+
+let hwWebGLCache: boolean | null = null;
+
+/** Returns true only when genuine hardware-accelerated WebGL is available (rejects SwiftShader/software renderers). */
+export function hasHardwareWebGL(): boolean {
+  if (hwWebGLCache !== null) return hwWebGLCache;
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    hwWebGLCache = false;
+    return false;
+  }
+  try {
+    const canvas = document.createElement('canvas');
+    const gl =
+      (canvas.getContext('webgl', {
+        failIfMajorPerformanceCaveat: true,
+      }) as WebGLRenderingContext | null) ||
+      (canvas.getContext('experimental-webgl', {
+        failIfMajorPerformanceCaveat: true,
+      }) as WebGLRenderingContext | null);
+    if (!gl) {
+      hwWebGLCache = false;
+      return false;
+    }
+    const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+    if (dbg) {
+      const renderer = String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) || '');
+      if (/SwiftShader|Software|llvmpipe|Microsoft Basic Render/i.test(renderer)) {
+        gl.getExtension('WEBGL_lose_context')?.loseContext();
+        hwWebGLCache = false;
+        return false;
+      }
+    }
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
+    hwWebGLCache = true;
+    return true;
+  } catch {
+    hwWebGLCache = false;
+    return false;
+  }
 }
 
 let currentTier: PerfTier =

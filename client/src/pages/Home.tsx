@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { preDecodeBelowFoldImages } from '../lib/scheduler';
 import { SEOHead } from '../components/ui/SEOHead';
 import { HeroSection } from '../components/home/HeroSection';
 import { FeatureStrip } from '../components/home/FeatureStrip';
@@ -14,6 +15,11 @@ interface HomeProps {
 }
 
 export const Home: React.FC<HomeProps> = React.memo(({ preloaderDone, onPrefetchCalendly }) => {
+  useEffect(() => {
+    if (!preloaderDone) return;
+    return preDecodeBelowFoldImages();
+  }, [preloaderDone]);
+
   return (
     <>
       <SEOHead

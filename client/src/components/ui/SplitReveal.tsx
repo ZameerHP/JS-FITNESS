@@ -48,15 +48,25 @@ export const SplitReveal: React.FC<SplitRevealProps> = ({
       return;
     }
 
+    let idleId: number | undefined;
+    let timeoutId: number | undefined;
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+
+    const startYPercent = trigger && tier !== 'high' ? 28 : trigger ? 80 : 100;
+    const startOpacity = trigger ? 1 : 0;
+
     const ctx = gsap.context(() => {
       gsap.fromTo(
         tokens,
-        { yPercent: 105, skewY: 6, opacity: 0 },
+        { yPercent: startYPercent, skewY: tier === 'high' ? 5 : 0, opacity: startOpacity },
         {
           yPercent: 0,
           skewY: 0,
           opacity: 1,
-          duration: 0.65,
+          duration: tier === 'high' ? 0.65 : 0.45,
           stagger,
           delay,
           ease: 'power4.out',
@@ -69,15 +79,28 @@ export const SplitReveal: React.FC<SplitRevealProps> = ({
               },
           onComplete: () => {
             if (revertOnComplete && containerRef.current) {
-              revertedRef.current = true;
-              containerRef.current.textContent = text;
+              const applyRevert = () => {
+                if (containerRef.current && !revertedRef.current) {
+                  revertedRef.current = true;
+                  containerRef.current.textContent = text;
+                }
+              };
+              if (w.requestIdleCallback) {
+                idleId = w.requestIdleCallback(applyRevert, { timeout: 500 });
+              } else {
+                timeoutId = window.setTimeout(applyRevert, 0);
+              }
             }
           },
         }
       );
     }, el);
 
-    return () => ctx.revert();
+    return () => {
+      if (idleId !== undefined) w.cancelIdleCallback?.(idleId);
+      if (timeoutId !== undefined) clearTimeout(timeoutId);
+      ctx.revert();
+    };
   }, [text, mode, stagger, delay, trigger, active, reducedMotion, tier, revertOnComplete]);
 
   const effectiveMode = tier === 'high' ? mode : 'words';

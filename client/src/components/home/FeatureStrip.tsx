@@ -3,6 +3,7 @@ import { gsap } from '../../lib/gsap';
 import { HOME_COPY } from '../../config/siteConfig';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useTier } from '../../lib/perfTier';
+import { scheduleChunkedTask } from '../../lib/scheduler';
 
 const FeatureIcon: React.FC<{ name: string }> = ({ name }) => {
   switch (name) {
@@ -62,46 +63,52 @@ export const FeatureStrip: React.FC = React.memo(() => {
     const el = panelRef.current;
     if (!el || reducedMotion || tier === 'low') return;
 
-    const strokes = el.querySelectorAll<SVGGeometryElement>('.feature-stroke');
-    strokes.forEach((s) => {
-      if (typeof s.getTotalLength === 'function') {
-        const len = s.getTotalLength();
-        gsap.set(s, { strokeDasharray: len, strokeDashoffset: len });
-      }
-    });
+    let ctx: gsap.Context | null = null;
+    const cancelTask = scheduleChunkedTask(() => {
+      const strokes = el.querySelectorAll<SVGGeometryElement>('.feature-stroke');
+      strokes.forEach((s) => {
+        if (typeof s.getTotalLength === 'function') {
+          const len = s.getTotalLength();
+          gsap.set(s, { strokeDasharray: len, strokeDashoffset: len });
+        }
+      });
 
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        el,
-        { y: 50, rotateX: 14, opacity: 0 },
-        {
-          y: 0,
-          rotateX: 6,
-          opacity: 1,
+      ctx = gsap.context(() => {
+        gsap.fromTo(
+          el,
+          { y: 50, rotateX: 14, opacity: 0 },
+          {
+            y: 0,
+            rotateX: 6,
+            opacity: 1,
+            duration: 0.75,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: el,
+              start: 'top 92%',
+              once: true,
+            },
+          }
+        );
+
+        gsap.to(strokes, {
+          strokeDashoffset: 0,
           duration: 0.75,
-          ease: 'power3.out',
+          stagger: 0.05,
+          ease: 'power2.out',
           scrollTrigger: {
             trigger: el,
-            start: 'top 92%',
+            start: 'top 90%',
             once: true,
           },
-        }
-      );
+        });
+      }, el);
+    });
 
-      gsap.to(strokes, {
-        strokeDashoffset: 0,
-        duration: 0.75,
-        stagger: 0.05,
-        ease: 'power2.out',
-        scrollTrigger: {
-          trigger: el,
-          start: 'top 90%',
-          once: true,
-        },
-      });
-    }, el);
-
-    return () => ctx.revert();
+    return () => {
+      cancelTask();
+      ctx?.revert();
+    };
   }, [reducedMotion, tier]);
 
   // Pause conic border rotation when offscreen
