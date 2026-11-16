@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { gsap, ScrollTrigger } from '../../lib/gsap';
+import { gsap } from '../../lib/gsap';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { useTier } from '../../lib/perfTier';
 
 interface DrawPathProps {
   d: string;
@@ -22,49 +23,37 @@ export const DrawPath: React.FC<DrawPathProps> = ({
   className = '',
   dualGlow = true,
 }) => {
+  const groupRef = useRef<SVGGElement>(null);
   const pathRef = useRef<SVGPathElement>(null);
   const glowRef = useRef<SVGPathElement>(null);
   const reducedMotion = useReducedMotion();
+  const tier = useTier();
 
   useEffect(() => {
+    const group = groupRef.current;
     const path = pathRef.current;
     const glow = glowRef.current;
-    if (!path) return;
+    if (!group || !path) return;
 
-    const len = path.getTotalLength();
-    const lenPx = `${len.toFixed(1)}px`;
-    const targets = glow ? [glow, path] : [path];
+    const interactiveHigh = tier === 'high' && !reducedMotion && !navigator.webdriver;
 
-    if (reducedMotion) {
-      targets.forEach((t) => {
-        t.style.strokeDasharray = lenPx;
-        t.style.strokeDashoffset = '0px';
-      });
+    if (!interactiveHigh) {
+      group.style.opacity = '1';
+      group.style.transform = 'translate3d(0, 0, 0)';
       return;
     }
 
-    targets.forEach((t) => {
-      t.style.strokeDasharray = lenPx;
-      t.style.strokeDashoffset = lenPx;
-    });
+    if (!scrub) {
+      const len = path.getTotalLength();
+      const lenPx = `${len.toFixed(1)}px`;
+      const targets = glow ? [glow, path] : [path];
+      targets.forEach((t) => {
+        t.style.strokeDasharray = lenPx;
+        t.style.strokeDashoffset = lenPx;
+      });
 
-    const ctx = gsap.context(() => {
-      if (scrub) {
-        let lastOffset = '';
-        ScrollTrigger.create({
-          trigger: path,
-          start: 'top 90%',
-          end: 'bottom 45%',
-          onUpdate: (self) => {
-            const v = `${(len * (1 - self.progress)).toFixed(1)}px`;
-            if (v === lastOffset) return;
-            lastOffset = v;
-            path.style.strokeDashoffset = v;
-            if (glow) glow.style.strokeDashoffset = v;
-          },
-        });
-      } else {
-        const state = { p: 1 };
+      const state = { p: 1 };
+      const ctx = gsap.context(() => {
         gsap.to(state, {
           p: 0,
           duration,
@@ -80,14 +69,33 @@ export const DrawPath: React.FC<DrawPathProps> = ({
             if (glow) glow.style.strokeDashoffset = v;
           },
         });
-      }
-    }, path);
+      }, path);
 
-    return () => ctx.revert();
-  }, [d, scrub, duration, reducedMotion]);
+      return () => ctx.revert();
+    }
+
+    // For scrub swooshes: compositor-only opacity + transform reveal via IntersectionObserver
+    group.style.opacity = '0';
+    group.style.transform = 'translate3d(-18px, 0, 0)';
+    group.style.transition =
+      'opacity 0.7s ease, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1)';
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          group.style.opacity = '1';
+          group.style.transform = 'translate3d(0, 0, 0)';
+          io.disconnect();
+        }
+      },
+      { threshold: 0.05 }
+    );
+    io.observe(group);
+    return () => io.disconnect();
+  }, [d, scrub, duration, reducedMotion, tier]);
 
   return (
-    <g className={className}>
+    <g ref={groupRef} className={className}>
       {dualGlow && (
         <path
           ref={glowRef}

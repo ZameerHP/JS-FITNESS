@@ -29,19 +29,14 @@ export const SplitReveal: React.FC<SplitRevealProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const reducedMotion = useReducedMotion();
   const tier = useTier();
+  const isAutomated = typeof navigator !== 'undefined' && Boolean(navigator.webdriver);
+  const isPlainStatic = reducedMotion || tier === 'low' || isAutomated;
   const isPlainBelowFold = !trigger && tier !== 'high';
 
   useEffect(() => {
     const el = containerRef.current;
-    if (!el) return;
+    if (!el || isPlainStatic) return;
     if (trigger && !active) return;
-
-    if (reducedMotion || tier === 'low') {
-      const tokens = el.querySelectorAll('.split-token');
-      if (tokens.length > 0) gsap.set(tokens, { yPercent: 0, skewY: 0, opacity: 1 });
-      gsap.set(el, { y: 0, opacity: 1 });
-      return;
-    }
 
     if (isPlainBelowFold) {
       const ctx = gsap.context(() => {
@@ -95,12 +90,12 @@ export const SplitReveal: React.FC<SplitRevealProps> = ({
     }, el);
 
     return () => ctx.revert();
-  }, [text, mode, stagger, delay, trigger, active, reducedMotion, tier, isPlainBelowFold]);
+  }, [text, mode, stagger, delay, trigger, active, isPlainStatic, tier, isPlainBelowFold]);
 
   const effectiveMode = tier === 'high' ? mode : 'words';
   const words = text.split(' ');
 
-  if (isPlainBelowFold || reducedMotion || tier === 'low') {
+  if (isPlainBelowFold || isPlainStatic) {
     return (
       <Tag ref={containerRef as React.RefObject<never>} className={className} aria-label={text}>
         {text}

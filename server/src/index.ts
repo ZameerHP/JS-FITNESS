@@ -59,8 +59,14 @@ if (env.isProd && fs.existsSync(publicClientDir)) {
     '/assets',
     express.static(path.join(publicClientDir, 'assets'), { maxAge: '1y', immutable: true })
   );
-  app.use('/fonts', express.static(path.join(publicClientDir, 'fonts'), { maxAge: '1y', immutable: true }));
-  app.use('/images', express.static(path.join(publicClientDir, 'images'), { maxAge: '30d' }));
+  app.use(
+    '/fonts',
+    express.static(path.join(publicClientDir, 'fonts'), { maxAge: '365d', immutable: true })
+  );
+  app.use(
+    '/images',
+    express.static(path.join(publicClientDir, 'images'), { maxAge: '365d', immutable: true })
+  );
   app.use(express.static(publicClientDir, { maxAge: '5m', etag: true }));
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {

@@ -32,6 +32,10 @@ export default defineConfig({
     target: 'es2020',
     sourcemap: false,
     cssCodeSplit: true,
+    modulePreload: {
+      resolveDependencies: (_filename, deps) =>
+        deps.filter((d) => !/three-|HeroParticles|AdminLayout|CalendlyModal|PerfHud|Contact-/i.test(d)),
+    },
     rollupOptions: {
       output: {
         manualChunks: {

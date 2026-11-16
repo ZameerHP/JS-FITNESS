@@ -5,7 +5,7 @@ import { gsap } from '../../lib/gsap';
 import { useSiteContent } from '../../context/ContentContext';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useTier } from '../../lib/perfTier';
-import { scheduleChunkedTask } from '../../lib/scheduler';
+import { onFirstUserInteraction, scheduleChunkedTask } from '../../lib/scheduler';
 import { JSLogo } from '../ui/JSLogo';
 import { Magnetic } from '../ui/Magnetic';
 
@@ -23,26 +23,31 @@ export const Footer: React.FC = React.memo(() => {
   const tier = useTier();
 
   useEffect(() => {
-    if (reducedMotion || tier === 'low' || !plateRef.current || !footerRef.current) return;
+    if (reducedMotion || tier !== 'high' || navigator.webdriver || !plateRef.current || !footerRef.current)
+      return;
     let ctx: gsap.Context | null = null;
-    const cancelTask = scheduleChunkedTask(() => {
-      if (!plateRef.current || !footerRef.current) return;
-      ctx = gsap.context(() => {
-        gsap.to(plateRef.current, {
-          rotation: 90,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: footerRef.current,
-            start: 'top bottom',
-            end: 'bottom bottom',
-            scrub: true,
-          },
-        });
-      }, footerRef);
+    let cancelTask: (() => void) | null = null;
+    const cancelInteract = onFirstUserInteraction(() => {
+      cancelTask = scheduleChunkedTask(() => {
+        if (!plateRef.current || !footerRef.current) return;
+        ctx = gsap.context(() => {
+          gsap.to(plateRef.current, {
+            rotation: 90,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: footerRef.current,
+              start: 'top bottom',
+              end: 'bottom bottom',
+              scrub: true,
+            },
+          });
+        }, footerRef);
+      });
     });
 
     return () => {
-      cancelTask();
+      cancelInteract();
+      cancelTask?.();
       ctx?.revert();
     };
   }, [reducedMotion, tier]);
@@ -71,7 +76,7 @@ export const Footer: React.FC = React.memo(() => {
         height={559}
         alt=""
         aria-hidden="true"
-        loading="lazy"
+        loading="eager"
         decoding="async"
         className="pointer-events-none hidden md:block absolute -right-24 top-1/2 -translate-y-1/2 w-56 h-56 object-contain opacity-65 select-none"
       />
@@ -79,7 +84,7 @@ export const Footer: React.FC = React.memo(() => {
       <div className="relative z-10 mx-auto max-w-[1280px] px-5 lg:px-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-0 pb-10">
           <div className="lg:pr-8 flex flex-col justify-center">
-            <Link to="/" aria-label="JS FITNESS INC Home">
+            <Link to="/" aria-label="JS FITNESS INC">
               <JSLogo size="md" />
             </Link>
             <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.28em] text-[#8C8C8C]">

@@ -5,7 +5,7 @@ import { HOME_COPY, PricingPhase } from '../../config/siteConfig';
 import { useSiteContent } from '../../context/ContentContext';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useTier } from '../../lib/perfTier';
-import { scheduleChunkedTask } from '../../lib/scheduler';
+import { onFirstUserInteraction, scheduleChunkedTask } from '../../lib/scheduler';
 import { Button } from '../ui/Button';
 import { DrawPath } from '../ui/DrawPath';
 import { TiltCard } from '../ui/TiltCard';
@@ -37,7 +37,7 @@ export const MembershipSection: React.FC = React.memo(() => {
     const el = sectionRef.current;
     if (!el) return;
 
-    if (reducedMotion || tier === 'low') {
+    if (reducedMotion || tier !== 'high' || navigator.webdriver) {
       if (hoursRef.current) hoursRef.current.textContent = '24';
       if (daysRef.current) daysRef.current.textContent = '7';
       if (slashRef.current) slashRef.current.style.opacity = '1';
@@ -45,108 +45,112 @@ export const MembershipSection: React.FC = React.memo(() => {
     }
 
     let ctx: gsap.Context | null = null;
-    const cancelTask = scheduleChunkedTask(() => {
-      ctx = gsap.context(() => {
-        if (tier === 'high' && bgRef.current) {
-          gsap.fromTo(
-            bgRef.current,
-            { scale: 1.04 },
-            {
-              scale: 1.14,
-              ease: 'none',
-              scrollTrigger: {
-                trigger: el,
-                start: 'top bottom',
-                end: 'bottom top',
-                scrub: true,
-              },
-            }
-          );
-        }
+    let cancelTask: (() => void) | null = null;
+    const cancelInteract = onFirstUserInteraction(() => {
+      cancelTask = scheduleChunkedTask(() => {
+        ctx = gsap.context(() => {
+          if (bgRef.current) {
+            gsap.fromTo(
+              bgRef.current,
+              { scale: 1.04 },
+              {
+                scale: 1.14,
+                ease: 'none',
+                scrollTrigger: {
+                  trigger: el,
+                  start: 'top bottom',
+                  end: 'bottom top',
+                  scrub: true,
+                },
+              }
+            );
+          }
 
-        const odometer = { h: 0, d: 0 };
-        let lastH = -1;
-        let lastD = -1;
-        const tl = gsap.timeline({
-          scrollTrigger: {
-            trigger: el,
-            start: 'top 76%',
-            once: true,
-          },
-        });
+          const odometer = { h: 0, d: 0 };
+          let lastH = -1;
+          let lastD = -1;
+          const tl = gsap.timeline({
+            scrollTrigger: {
+              trigger: el,
+              start: 'top 76%',
+              once: true,
+            },
+          });
 
-        tl.to(odometer, {
-          h: 24,
-          d: 7,
-          duration: 0.8,
-          ease: 'power3.out',
-          onUpdate: () => {
-            const h = Math.round(odometer.h);
-            const d = Math.round(odometer.d);
-            if (h !== lastH && hoursRef.current) {
-              lastH = h;
-              hoursRef.current.textContent = String(h);
-            }
-            if (d !== lastD && daysRef.current) {
-              lastD = d;
-              daysRef.current.textContent = String(d);
-            }
-          },
-        })
-          .fromTo(
-            slashRef.current,
-            { y: -20, opacity: 0 },
-            { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
-            0.3
-          )
-          .fromTo(
-            accessRef.current,
-            { x: -24, opacity: 0 },
-            { x: 0, opacity: 1, duration: 0.7, ease: 'power3.out' },
-            0.3
-          );
+          tl.to(odometer, {
+            h: 24,
+            d: 7,
+            duration: 0.8,
+            ease: 'power3.out',
+            onUpdate: () => {
+              const h = Math.round(odometer.h);
+              const d = Math.round(odometer.d);
+              if (h !== lastH && hoursRef.current) {
+                lastH = h;
+                hoursRef.current.textContent = String(h);
+              }
+              if (d !== lastD && daysRef.current) {
+                lastD = d;
+                daysRef.current.textContent = String(d);
+              }
+            },
+          })
+            .fromTo(
+              slashRef.current,
+              { y: -20, opacity: 0 },
+              { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
+              0.3
+            )
+            .fromTo(
+              accessRef.current,
+              { x: -24, opacity: 0 },
+              { x: 0, opacity: 1, duration: 0.7, ease: 'power3.out' },
+              0.3
+            );
 
-        if (cardRef.current) {
-          gsap.fromTo(
-            cardRef.current,
-            { x: 45, opacity: 0 },
-            {
-              x: 0,
-              opacity: 1,
-              duration: 0.75,
-              ease: 'power3.out',
-              scrollTrigger: {
-                trigger: cardRef.current,
-                start: 'top 84%',
-                once: true,
-              },
-            }
-          );
+          if (cardRef.current) {
+            gsap.fromTo(
+              cardRef.current,
+              { x: 45, opacity: 0 },
+              {
+                x: 0,
+                opacity: 1,
+                duration: 0.75,
+                ease: 'power3.out',
+                scrollTrigger: {
+                  trigger: cardRef.current,
+                  start: 'top 84%',
+                  once: true,
+                },
+              }
+            );
 
-          const rows = cardRef.current.querySelectorAll('.phase-row');
-          gsap.fromTo(
-            rows,
-            { y: 16, opacity: 0 },
-            {
-              y: 0,
-              opacity: 1,
-              duration: 0.45,
-              stagger: 0.1,
-              delay: 0.15,
-              ease: 'power3.out',
-              scrollTrigger: {
-                trigger: cardRef.current,
-                start: 'top 84%',
-                once: true,
-              },
-            }
-          );
-        }
-      }, el);
+            const rows = cardRef.current.querySelectorAll('.phase-row');
+            gsap.fromTo(
+              rows,
+              { y: 16, opacity: 0 },
+              {
+                y: 0,
+                opacity: 1,
+                duration: 0.45,
+                stagger: 0.1,
+                delay: 0.15,
+                ease: 'power3.out',
+                scrollTrigger: {
+                  trigger: cardRef.current,
+                  start: 'top 84%',
+                  once: true,
+                },
+              }
+            );
+          }
+        }, el);
+      });
     });
 
     return () => {
-      cancelTask();
+      cancelInteract();
+      cancelTask?.();
       ctx?.revert();
     };
   }, [reducedMotion, tier]);
@@ -166,7 +170,7 @@ export const MembershipSection: React.FC = React.memo(() => {
           width={1920}
           height={1080}
           alt=""
-          loading="lazy"
+          loading="eager"
           decoding="async"
           className="h-full w-full object-cover opacity-45"
         />
@@ -205,9 +209,9 @@ export const MembershipSection: React.FC = React.memo(() => {
           <div className="lg:col-span-6">
             <div className="eyebrow-row mb-5">{HOME_COPY.membership.eyebrow}</div>
 
-            <div className="headline-display select-none">
-              <div
-                className="text-[88px] sm:text-[112px] lg:text-[120px] leading-[0.86] text-[#B6F500] tabular-nums"
+            <h2 className="headline-display select-none">
+              <span
+                className="block text-[88px] sm:text-[112px] lg:text-[120px] leading-[0.86] text-[#B6F500] tabular-nums"
                 style={{ textShadow: '0 0 26px rgba(182, 245, 0, 0.35)' }}
               >
                 <span ref={hoursRef}>24</span>
@@ -215,14 +219,14 @@ export const MembershipSection: React.FC = React.memo(() => {
                   /
                 </span>
                 <span ref={daysRef}>7</span>
-              </div>
-              <div
+              </span>
+              <span
                 ref={accessRef}
-                className="text-[78px] sm:text-[96px] lg:text-[106px] leading-[0.88] text-metallic mt-1"
+                className="block text-[78px] sm:text-[96px] lg:text-[106px] leading-[0.88] text-metallic mt-1"
               >
                 {HOME_COPY.membership.bigWhite}
-              </div>
-            </div>
+              </span>
+            </h2>
 
             <p className="mt-6 max-w-[380px] text-[15px] leading-relaxed text-[#C9C9C9]">
               {HOME_COPY.membership.description}

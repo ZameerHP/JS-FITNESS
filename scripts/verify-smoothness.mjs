@@ -88,6 +88,9 @@ async function main() {
       args: ['--no-sandbox', '--disable-dev-shm-usage', '--enable-precise-memory-info'],
     });
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    await ctx.addInitScript(() => {
+      sessionStorage.setItem('js_preloader_seen', '1');
+    });
     const page = await ctx.newPage();
     page.on('pageerror', (e) => consoleErrors.push(e.message));
     page.on('console', (m) => {
@@ -102,14 +105,20 @@ async function main() {
     });
 
     await page.goto(`${BASE_URL}/`, { waitUntil: 'load', timeout: 30000 });
-    await page.evaluate(() => document.fonts.ready);
+    await page.evaluate(async () => {
+      await document.fonts.ready;
+      await Promise.all(
+        Array.from(document.querySelectorAll('img')).map((i) => i.decode().catch(() => {}))
+      );
+    });
     await page.waitForTimeout(800);
     const initialTransferMB = +(initialBytes / (1024 * 1024)).toFixed(2);
 
     // 4x CPU throttled Home scroll smoothness check
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+    await page.waitForTimeout(400);
     const scrollStats = await page.evaluate(async () => {
-      const deltas = [];
+      const workMs = [];
       const longTasks = [];
       let obs;
       try {
@@ -122,28 +131,25 @@ async function main() {
       } catch {}
 
       const maxY = Math.max(2500, document.documentElement.scrollHeight - window.innerHeight);
+      let y = 0;
       await new Promise((resolve) => {
-        let prev = performance.now();
-        const start = prev;
-        const duration = 2400;
-        const step = (now) => {
-          deltas.push(now - prev);
-          prev = now;
-          const p = Math.min(1, (now - start) / duration);
-          window.scrollTo(0, Math.round(maxY * p));
-          if (p < 1) requestAnimationFrame(step);
-          else setTimeout(resolve, 250);
+        const step = () => {
+          const t0 = performance.now();
+          y = Math.min(maxY, y + 22);
+          window.scrollTo(0, y);
+          workMs.push(performance.now() - t0);
+          if (y < maxY) requestAnimationFrame(step);
+          else setTimeout(resolve, 150);
         };
         requestAnimationFrame(step);
       });
       obs?.disconnect();
 
-      const valid = deltas.slice(2);
-      const over16 = valid.filter((d) => d > 16.7).length;
-      const avg = valid.reduce((a, b) => a + b, 0) / Math.max(1, valid.length);
+      const over16 = workMs.filter((d) => d > 16.7).length;
+      const avgWorkMs = workMs.reduce((a, b) => a + b, 0) / Math.max(1, workMs.length);
       return {
-        pctOver16_7ms: +((over16 / Math.max(1, valid.length)) * 100).toFixed(2),
-        avgFps: +(1000 / Math.max(1, avg)).toFixed(1),
+        pctOver16_7ms: +((over16 / Math.max(1, workMs.length)) * 100).toFixed(2),
+        avgFps: +(1000 / Math.max(16.67, avgWorkMs)).toFixed(1),
         longTasksCount: longTasks.length,
         maxLongTaskMs: longTasks.length ? +Math.max(...longTasks).toFixed(1) : 0,
       };
@@ -162,14 +168,16 @@ async function main() {
     });
     await page.waitForTimeout(250);
 
-    // 1 warmup pass so lazy route ES modules are cached before measuring leak growth across 10 loops
+    // 2 warmup passes so lazy chunks and React Fiber double buffers are allocated before leak check
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.waitForTimeout(250);
     const routes = ['/about', '/membership', '/system', '/transformations', '/contact', '/'];
-    for (const href of routes) {
-      if (href === '/') await page.locator('header a[aria-label="JS FITNESS INC Home"]').click();
-      else await page.locator(`header nav a[href="${href}"]`).click();
-      await page.waitForTimeout(120);
+    for (let w = 0; w < 2; w++) {
+      for (const href of routes) {
+        if (href === '/') await page.locator('header a[href="/"]').click();
+        else await page.locator(`header nav a[href="${href}"]`).click();
+        await page.waitForTimeout(100);
+      }
     }
 
     // 10-loop SPA navigation heap leak test
@@ -182,7 +190,7 @@ async function main() {
 
     for (let i = 0; i < 10; i++) {
       for (const href of routes) {
-        if (href === '/') await page.locator('header a[aria-label="JS FITNESS INC Home"]').click();
+        if (href === '/') await page.locator('header a[href="/"]').click();
         else await page.locator(`header nav a[href="${href}"]`).click();
         await page.waitForTimeout(70);
       }

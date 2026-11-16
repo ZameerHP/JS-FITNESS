@@ -1,5 +1,3 @@
-import { gsap } from './gsap';
-
 export interface PointerState {
   x: number;
   y: number;
@@ -21,7 +19,15 @@ const state: PointerState = {
 type TickSubscriber = (pointer: Readonly<PointerState>) => void;
 const subscribers = new Set<TickSubscriber>();
 let initialized = false;
-let tickerAttached = false;
+let rafPending = false;
+let rafId = 0;
+
+function tick() {
+  rafPending = false;
+  if (subscribers.size === 0) return;
+  subscribers.forEach((fn) => fn(state));
+  state.dirty = false;
+}
 
 function onPointerMove(e: PointerEvent) {
   const w = window.innerWidth || 1;
@@ -32,12 +38,10 @@ function onPointerMove(e: PointerEvent) {
   state.normY = (e.clientY / h) * 2 - 1;
   state.target = e.target;
   state.dirty = true;
-}
-
-function tick() {
-  if (subscribers.size === 0) return;
-  subscribers.forEach((fn) => fn(state));
-  state.dirty = false;
+  if (!rafPending && subscribers.size > 0) {
+    rafPending = true;
+    rafId = requestAnimationFrame(tick);
+  }
 }
 
 function ensureAttached() {
@@ -46,10 +50,6 @@ function ensureAttached() {
     window.addEventListener('pointermove', onPointerMove, { passive: true });
     initialized = true;
   }
-  if (!tickerAttached && subscribers.size > 0) {
-    gsap.ticker.add(tick);
-    tickerAttached = true;
-  }
 }
 
 export function subscribePointerTick(fn: TickSubscriber): () => void {
@@ -57,9 +57,9 @@ export function subscribePointerTick(fn: TickSubscriber): () => void {
   ensureAttached();
   return () => {
     subscribers.delete(fn);
-    if (subscribers.size === 0 && tickerAttached) {
-      gsap.ticker.remove(tick);
-      tickerAttached = false;
+    if (subscribers.size === 0 && rafPending) {
+      cancelAnimationFrame(rafId);
+      rafPending = false;
     }
   };
 }

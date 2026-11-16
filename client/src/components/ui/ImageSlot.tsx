@@ -8,6 +8,7 @@ interface ImageSlotProps {
   imgClassName?: string;
   vignette?: boolean;
   priority?: boolean;
+  lazy?: boolean;
   label?: string;
 }
 
@@ -18,6 +19,7 @@ export const ImageSlot: React.FC<ImageSlotProps> = ({
   imgClassName = 'object-cover w-full h-full',
   vignette = true,
   priority = false,
+  lazy = false,
   label,
 }) => {
   const [failed, setFailed] = useState(false);
@@ -35,12 +37,22 @@ export const ImageSlot: React.FC<ImageSlotProps> = ({
     );
   }
 
+  const transformMatch = /^\/images\/(transform-(?:male|female)-(?:before|after))\.webp$/.exec(src);
+  const srcSet = transformMatch
+    ? `/images/${transformMatch[1]}-320.webp 320w, ${src} 600w`
+    : undefined;
+  const sizes = transformMatch ? '(max-width: 768px) 145px, 260px' : undefined;
+
   return (
     <div className={`relative overflow-hidden ${className}`}>
       <img
         src={src}
+        srcSet={srcSet}
+        sizes={sizes}
+        width={600}
+        height={800}
         alt={alt}
-        loading={priority ? 'eager' : 'lazy'}
+        loading={priority || !lazy ? 'eager' : 'lazy'}
         decoding={priority ? 'sync' : 'async'}
         onError={() => setFailed(true)}
         className={imgClassName}

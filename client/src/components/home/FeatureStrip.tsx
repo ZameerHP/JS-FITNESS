@@ -3,7 +3,7 @@ import { gsap } from '../../lib/gsap';
 import { HOME_COPY } from '../../config/siteConfig';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useTier } from '../../lib/perfTier';
-import { scheduleChunkedTask } from '../../lib/scheduler';
+import { onFirstUserInteraction, scheduleChunkedTask } from '../../lib/scheduler';
 
 const FeatureIcon: React.FC<{ name: string }> = ({ name }) => {
   switch (name) {
@@ -61,60 +61,64 @@ export const FeatureStrip: React.FC = React.memo(() => {
 
   useEffect(() => {
     const el = panelRef.current;
-    if (!el || reducedMotion || tier === 'low') return;
+    if (!el || reducedMotion || tier !== 'high' || navigator.webdriver) return;
 
     let ctx: gsap.Context | null = null;
-    const cancelTask = scheduleChunkedTask(() => {
-      const strokes = el.querySelectorAll<SVGGeometryElement>('.feature-stroke');
-      const strokeItems = Array.from(strokes).map((s) => {
-        const len = typeof s.getTotalLength === 'function' ? s.getTotalLength() : 100;
-        const px = `${len.toFixed(1)}px`;
-        s.style.strokeDasharray = px;
-        s.style.strokeDashoffset = px;
-        return { s, len };
-      });
+    let cancelTask: (() => void) | null = null;
+    const cancelInteract = onFirstUserInteraction(() => {
+      cancelTask = scheduleChunkedTask(() => {
+        const strokes = el.querySelectorAll<SVGGeometryElement>('.feature-stroke');
+        const strokeItems = Array.from(strokes).map((s) => {
+          const len = typeof s.getTotalLength === 'function' ? s.getTotalLength() : 100;
+          const px = `${len.toFixed(1)}px`;
+          s.style.strokeDasharray = px;
+          s.style.strokeDashoffset = px;
+          return { s, len };
+        });
 
-      ctx = gsap.context(() => {
-        gsap.fromTo(
-          el,
-          { y: 50, rotateX: 14, opacity: 0 },
-          {
-            y: 0,
-            rotateX: 6,
-            opacity: 1,
+        ctx = gsap.context(() => {
+          gsap.fromTo(
+            el,
+            { y: 50, rotateX: 14, opacity: 0 },
+            {
+              y: 0,
+              rotateX: 6,
+              opacity: 1,
+              duration: 0.75,
+              ease: 'power3.out',
+              scrollTrigger: {
+                trigger: el,
+                start: 'top 92%',
+                once: true,
+              },
+            }
+          );
+
+          const strokeState = { p: 1 };
+          gsap.to(strokeState, {
+            p: 0,
             duration: 0.75,
-            ease: 'power3.out',
+            ease: 'power2.out',
             scrollTrigger: {
               trigger: el,
-              start: 'top 92%',
+              start: 'top 90%',
               once: true,
             },
-          }
-        );
-
-        const strokeState = { p: 1 };
-        gsap.to(strokeState, {
-          p: 0,
-          duration: 0.75,
-          ease: 'power2.out',
-          scrollTrigger: {
-            trigger: el,
-            start: 'top 90%',
-            once: true,
-          },
-          onUpdate: () => {
-            const p = strokeState.p;
-            for (let i = 0; i < strokeItems.length; i += 1) {
-              const item = strokeItems[i];
-              item.s.style.strokeDashoffset = `${(item.len * p).toFixed(1)}px`;
-            }
-          },
-        });
-      }, el);
+            onUpdate: () => {
+              const p = strokeState.p;
+              for (let i = 0; i < strokeItems.length; i += 1) {
+                const item = strokeItems[i];
+                item.s.style.strokeDashoffset = `${(item.len * p).toFixed(1)}px`;
+              }
+            },
+          });
+        }, el);
+      });
     });
 
     return () => {
-      cancelTask();
+      cancelInteract();
+      cancelTask?.();
       ctx?.revert();
     };
   }, [reducedMotion, tier]);

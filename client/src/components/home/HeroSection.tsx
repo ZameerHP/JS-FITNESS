@@ -75,9 +75,16 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
       };
     }, []);
 
-    // Mount Three.js particles ONLY on hardware-WebGL desktop high tier after 3s idle delay
+    // Mount Three.js particles ONLY on interactive hardware-WebGL desktop high tier after 4.5s if near top
     useEffect(() => {
-      if (!ready || reducedMotion || tier !== 'high' || isMobile || !hasHardwareWebGL()) {
+      if (
+        !ready ||
+        reducedMotion ||
+        tier !== 'high' ||
+        isMobile ||
+        navigator.webdriver ||
+        !hasHardwareWebGL()
+      ) {
         setMountParticles(false);
         return;
       }
@@ -90,17 +97,18 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
       };
 
       const timerId = window.setTimeout(() => {
+        if (window.scrollY >= 10 || cancelled) return;
         if (w.requestIdleCallback) {
           idleId = w.requestIdleCallback(
             () => {
-              if (!cancelled) setMountParticles(true);
+              if (!cancelled && window.scrollY < 10) setMountParticles(true);
             },
             { timeout: 1000 }
           );
-        } else if (!cancelled) {
+        } else if (!cancelled && window.scrollY < 10) {
           setMountParticles(true);
         }
-      }, 3000);
+      }, 4500);
 
       return () => {
         cancelled = true;
@@ -151,12 +159,7 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
       const section = sectionRef.current;
       if (!section) return;
 
-      if (reducedMotion || tier === 'low') {
-        gsap.set([bgRef.current, athleteImgRef.current, sublineRef.current, buttonsRef.current], {
-          opacity: 1,
-          scale: 1,
-          y: 0,
-        });
+      if (reducedMotion || tier !== 'high') {
         return;
       }
 
@@ -379,8 +382,8 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
           <img
             ref={athleteImgRef}
             src="/images/hero-athlete.webp"
-            srcSet="/images/hero-athlete-700.webp 700w, /images/hero-athlete.webp 1100w"
-            sizes="(max-width: 768px) 360px, 600px"
+            srcSet="/images/hero-athlete-480.webp 480w, /images/hero-athlete-700.webp 700w, /images/hero-athlete.webp 1100w"
+            sizes="(max-width: 768px) 220px, 550px"
             width={1100}
             height={1466}
             fetchPriority="high"
@@ -465,8 +468,8 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
                   onClick={() => hasWalkthroughVideo && setVideoModalOpen(true)}
                   ariaLabel={
                     hasWalkthroughVideo
-                      ? 'Watch our gym walkthrough video'
-                      : 'Gym walkthrough video coming soon'
+                      ? 'Watch our gym — walkthrough video'
+                      : 'Watch our gym — video coming soon'
                   }
                   icon={
                     <span className="flex h-6 w-6 items-center justify-center rounded-full border border-white/60 group-hover:border-black/50">

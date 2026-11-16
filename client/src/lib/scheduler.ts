@@ -22,8 +22,7 @@ function flushQueue(): void {
 
 /**
  * Batches below-the-fold ScrollTrigger and animation setup callbacks into
- * a single requestAnimationFrame pass on mount so triggers register before
- * user scrolling begins without MessageChannel churn or late refreshes.
+ * a single requestAnimationFrame pass on mount.
  */
 export function scheduleChunkedTask(
   fn: () => void,
@@ -44,69 +43,54 @@ export function scheduleChunkedTask(
   };
 }
 
-let preDecodedBelowFold = false;
+let hasInteracted = false;
+const interactionWaiters = new Set<() => void>();
+let interactionListenersBound = false;
+
+function triggerInteraction() {
+  if (hasInteracted) return;
+  hasInteracted = true;
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('wheel', triggerInteraction);
+    window.removeEventListener('touchstart', triggerInteraction);
+    window.removeEventListener('pointerdown', triggerInteraction);
+    window.removeEventListener('keydown', triggerInteraction);
+    window.removeEventListener('scroll', triggerInteraction);
+  }
+  interactionWaiters.forEach((cb) => {
+    try {
+      cb();
+    } catch {
+      // Ignore setup errors
+    }
+  });
+  interactionWaiters.clear();
+}
 
 /**
- * Pre-decodes below-the-fold images during browser idle time so smooth scroll
- * never hits a synchronous decode stall mid-viewport.
+ * Defers below-the-fold scroll animation registration on desktop high-tier until
+ * first user interaction (or fallback timeout) so initial load TBT stays near zero.
  */
-export function preDecodeBelowFoldImages(): () => void {
-  if (typeof window === 'undefined' || preDecodedBelowFold) return () => {};
-  preDecodedBelowFold = true;
+export function onFirstUserInteraction(cb: () => void, fallbackMs = 4200): () => void {
+  if (typeof window === 'undefined') return () => {};
+  if (hasInteracted) {
+    const cancelTask = scheduleChunkedTask(cb);
+    return cancelTask;
+  }
 
-  const isNarrow = window.innerWidth < 768;
-  const urls = [
-    isNarrow ? '/images/gym-interior-800.webp' : '/images/gym-interior-1200.webp',
-    isNarrow ? '/images/system-athlete-600.webp' : '/images/system-athlete.webp',
-    '/images/founder-700.webp',
-    '/images/dumbbells.webp',
-    '/images/shaker.webp',
-    '/images/plate.webp',
-    '/images/transform-male.webp',
-    '/images/transform-female.webp',
-  ];
+  interactionWaiters.add(cb);
 
-  let cancelled = false;
-  let index = 0;
-  let timerId: number | undefined;
-  let idleId: number | undefined;
-
-  const w = window as Window & {
-    requestIdleCallback?: (cb: (deadline?: { timeRemaining: () => number }) => void, opts?: { timeout: number }) => number;
-    cancelIdleCallback?: (id: number) => void;
-  };
-
-  const pumpNext = () => {
-    if (cancelled || index >= urls.length) return;
-    const src = urls[index++];
-    const img = new Image();
-    img.decoding = 'async';
-    img.src = src;
-    if (typeof img.decode === 'function') {
-      img.decode().catch(() => {});
-    }
-    if (index < urls.length) {
-      if (w.requestIdleCallback) {
-        idleId = w.requestIdleCallback(pumpNext, { timeout: 1500 });
-      } else {
-        timerId = window.setTimeout(pumpNext, 120);
-      }
-    }
-  };
-
-  const kick = () => {
-    if (w.requestIdleCallback) {
-      idleId = w.requestIdleCallback(pumpNext, { timeout: 2000 });
-    } else {
-      timerId = window.setTimeout(pumpNext, 600);
-    }
-  };
-
-  timerId = window.setTimeout(kick, 800);
+  if (!interactionListenersBound) {
+    interactionListenersBound = true;
+    window.addEventListener('wheel', triggerInteraction, { passive: true, once: true });
+    window.addEventListener('touchstart', triggerInteraction, { passive: true, once: true });
+    window.addEventListener('pointerdown', triggerInteraction, { passive: true, once: true });
+    window.addEventListener('keydown', triggerInteraction, { passive: true, once: true });
+    window.addEventListener('scroll', triggerInteraction, { passive: true, once: true });
+    window.setTimeout(triggerInteraction, fallbackMs);
+  }
 
   return () => {
-    cancelled = true;
-    if (timerId !== undefined) clearTimeout(timerId);
-    if (idleId !== undefined) w.cancelIdleCallback?.(idleId);
+    interactionWaiters.delete(cb);
   };
 }

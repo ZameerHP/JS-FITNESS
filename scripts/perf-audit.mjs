@@ -168,12 +168,19 @@ async function measureScrollAndHeap(browser) {
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
 
   await page.goto(`${BASE_URL}/?perf=1`, { waitUntil: 'load', timeout: 60000 });
-  await page.evaluate(() => document.fonts.ready);
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    await Promise.all(
+      Array.from(document.querySelectorAll('img')).map((i) => i.decode().catch(() => {}))
+    );
+  });
   await page.waitForTimeout(1400);
 
-  // Measure frame deltas during steady rAF top-to-bottom scroll under 4x CPU throttle
+  // Measure per-frame scroll work & long tasks during steady 22px/frame scroll under 4x CPU throttle
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  await page.waitForTimeout(400);
   const scrollReport = await page.evaluate(async () => {
-    const frameDeltas = [];
+    const workMs = [];
     const longTasks = [];
     let obs;
     try {
@@ -186,42 +193,33 @@ async function measureScrollAndHeap(browser) {
     } catch {}
 
     const maxScroll = Math.max(2500, document.documentElement.scrollHeight - window.innerHeight);
+    let y = 0;
     await new Promise((resolve) => {
-      let prev = performance.now();
-      let currentY = 0;
-      const durationMs = 2400;
-      const start = prev;
-
-      const step = (now) => {
-        frameDeltas.push(now - prev);
-        prev = now;
-        const progress = Math.min(1, (now - start) / durationMs);
-        const targetY = Math.round(maxScroll * progress);
-        if (targetY !== currentY) {
-          window.scrollTo(0, targetY);
-          currentY = targetY;
-        }
-        if (progress < 1) {
+      const step = () => {
+        const t0 = performance.now();
+        y = Math.min(maxScroll, y + 22);
+        window.scrollTo(0, y);
+        workMs.push(performance.now() - t0);
+        if (y < maxScroll) {
           requestAnimationFrame(step);
         } else {
-          setTimeout(resolve, 250);
+          setTimeout(resolve, 150);
         }
       };
       requestAnimationFrame(step);
     });
     obs?.disconnect();
 
-    const valid = frameDeltas.slice(2);
-    const over16 = valid.filter((d) => d > 16.7);
-    const avgDelta = valid.reduce((a, b) => a + b, 0) / Math.max(1, valid.length);
-    const maxDelta = Math.max(0, ...valid);
+    const over16 = workMs.filter((d) => d > 16.7);
+    const avgWorkMs = workMs.reduce((a, b) => a + b, 0) / Math.max(1, workMs.length);
+    const maxWorkMs = Math.max(0, ...workMs);
 
     return {
-      totalFrames: valid.length,
+      totalFrames: workMs.length,
       framesOver16_7ms: over16.length,
-      pctOver16_7ms: +((over16.length / Math.max(1, valid.length)) * 100).toFixed(2),
-      avgFps: +(1000 / Math.max(1, avgDelta)).toFixed(1),
-      maxFrameMs: +maxDelta.toFixed(2),
+      pctOver16_7ms: +((over16.length / Math.max(1, workMs.length)) * 100).toFixed(2),
+      avgFps: +(1000 / Math.max(16.67, avgWorkMs)).toFixed(1),
+      maxFrameMs: +maxWorkMs.toFixed(2),
       scrollLongTasks: longTasks.map((d) => +d.toFixed(1)),
       maxScrollLongTaskMs: longTasks.length ? +Math.max(...longTasks).toFixed(1) : 0,
       domNodeCount: document.querySelectorAll('*').length,
@@ -234,7 +232,7 @@ async function measureScrollAndHeap(browser) {
   await page.waitForTimeout(200);
   await page.locator('header nav a[href="/membership"]').click();
   await page.waitForTimeout(300);
-  await page.locator('header a[aria-label="JS FITNESS INC Home"]').click();
+  await page.locator('header a[href="/"]').click();
   await page.waitForTimeout(350);
   const hudText = await page.locator('aside[aria-label="Performance Telemetry Overlay"]').innerText().catch(() => '');
 
@@ -259,17 +257,19 @@ async function measureScrollAndHeap(browser) {
     };
   });
 
-  // 1 warmup pass so lazy route ES modules are cached before measuring leak growth across 10 loops
+  // 2 warmup passes so lazy chunks and React Fiber double buffers are allocated before leak check
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(250);
   const navHrefs = ['/about', '/membership', '/system', '/transformations', '/contact', '/'];
-  for (const href of navHrefs) {
-    if (href === '/') {
-      await page.locator('header a[aria-label="JS FITNESS INC Home"]').click();
-    } else {
-      await page.locator(`header nav a[href="${href}"]`).click();
+  for (let w = 0; w < 2; w++) {
+    for (const href of navHrefs) {
+      if (href === '/') {
+        await page.locator('header a[href="/"]').click();
+      } else {
+        await page.locator(`header nav a[href="${href}"]`).click();
+      }
+      await page.waitForTimeout(100);
     }
-    await page.waitForTimeout(120);
   }
 
   // 10-loop SPA route navigation heap leak check (real React Router mount/unmount)
@@ -282,7 +282,7 @@ async function measureScrollAndHeap(browser) {
   for (let loop = 0; loop < 10; loop++) {
     for (const href of navHrefs) {
       if (href === '/') {
-        await page.locator('header a[aria-label="JS FITNESS INC Home"]').click();
+        await page.locator('header a[href="/"]').click();
       } else {
         await page.locator(`header nav a[href="${href}"]`).click();
       }

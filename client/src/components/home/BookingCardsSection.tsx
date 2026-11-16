@@ -5,7 +5,7 @@ import { HOME_COPY } from '../../config/siteConfig';
 import { useSiteContent } from '../../context/ContentContext';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { useTier } from '../../lib/perfTier';
-import { scheduleChunkedTask } from '../../lib/scheduler';
+import { onFirstUserInteraction, scheduleChunkedTask } from '../../lib/scheduler';
 import { Button } from '../ui/Button';
 import { TiltCard } from '../ui/TiltCard';
 import { CountUp } from '../ui/CountUp';
@@ -27,11 +27,12 @@ export const BookingCardsSection: React.FC<BookingCardsSectionProps> = React.mem
 
     useEffect(() => {
       const el = sectionRef.current;
-      if (!el || reducedMotion || tier === 'low') return;
+      if (!el || reducedMotion || tier !== 'high' || navigator.webdriver) return;
 
       let floatD: gsap.core.Tween | null = null;
       let floatS: gsap.core.Tween | null = null;
       let ctx: gsap.Context | null = null;
+      let cancelTask: (() => void) | null = null;
       let inView = false;
 
       const sync = () => {
@@ -44,28 +45,28 @@ export const BookingCardsSection: React.FC<BookingCardsSectionProps> = React.mem
         }
       };
 
-      const cancelTask = scheduleChunkedTask(() => {
-        ctx = gsap.context(() => {
-          if (cardsRef.current) {
-            gsap.fromTo(
-              cardsRef.current.children,
-              { y: 36, opacity: 0 },
-              {
-                y: 0,
-                opacity: 1,
-                duration: 0.7,
-                stagger: 0.14,
-                ease: 'power3.out',
-                scrollTrigger: {
-                  trigger: cardsRef.current,
-                  start: 'top 86%',
-                  once: true,
-                },
-              }
-            );
-          }
+      const cancelInteract = onFirstUserInteraction(() => {
+        cancelTask = scheduleChunkedTask(() => {
+          ctx = gsap.context(() => {
+            if (cardsRef.current) {
+              gsap.fromTo(
+                cardsRef.current.children,
+                { y: 36, opacity: 0 },
+                {
+                  y: 0,
+                  opacity: 1,
+                  duration: 0.7,
+                  stagger: 0.14,
+                  ease: 'power3.out',
+                  scrollTrigger: {
+                    trigger: cardsRef.current,
+                    start: 'top 86%',
+                    once: true,
+                  },
+                }
+              );
+            }
 
-          if (tier === 'high') {
             floatD = gsap.to(dumbbellsRef.current, {
               y: -8,
               rotation: 2,
@@ -85,9 +86,9 @@ export const BookingCardsSection: React.FC<BookingCardsSectionProps> = React.mem
               ease: 'sine.inOut',
               paused: true,
             });
-          }
-        }, el);
-        sync();
+          }, el);
+          sync();
+        });
       });
 
       const io = new IntersectionObserver(
@@ -101,7 +102,8 @@ export const BookingCardsSection: React.FC<BookingCardsSectionProps> = React.mem
       document.addEventListener('visibilitychange', sync);
 
       return () => {
-        cancelTask();
+        cancelInteract();
+        cancelTask?.();
         io.disconnect();
         document.removeEventListener('visibilitychange', sync);
         ctx?.revert();
@@ -178,7 +180,7 @@ export const BookingCardsSection: React.FC<BookingCardsSectionProps> = React.mem
                   width={720}
                   height={333}
                   alt="Black hex dumbbells"
-                  loading="lazy"
+                  loading="eager"
                   decoding="async"
                   className="pointer-events-none hidden sm:block absolute -right-4 -bottom-6 w-52 lg:w-60 h-auto object-contain"
                 />
@@ -244,7 +246,7 @@ export const BookingCardsSection: React.FC<BookingCardsSectionProps> = React.mem
                   width={520}
                   height={468}
                   alt="JS FITNESS shaker bottle"
-                  loading="lazy"
+                  loading="eager"
                   decoding="async"
                   className="pointer-events-none hidden sm:block absolute right-4 -bottom-4 w-32 lg:w-36 h-auto object-contain"
                 />

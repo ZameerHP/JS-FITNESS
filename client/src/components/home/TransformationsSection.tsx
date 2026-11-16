@@ -202,7 +202,7 @@ export const TransformationsSection: React.FC = React.memo(() => {
               </button>
             </div>
 
-            <div className="mt-5 flex items-center justify-center gap-2">
+            <div className="mt-4 flex items-center justify-center gap-1">
               {Array.from({ length: Math.max(3, pageCount) }).map((_, i) => {
                 const isActive = i === index % Math.max(3, pageCount);
                 return (
@@ -211,12 +211,16 @@ export const TransformationsSection: React.FC = React.memo(() => {
                     type="button"
                     onClick={() => setIndex(i % pageCount)}
                     aria-label={`View transformation slide ${i + 1}`}
-                    className={`h-2 rounded-full transition-[width,background-color] duration-300 ${
-                      isActive
-                        ? 'w-7 bg-[#B6F500] shadow-[0_0_10px_#B6F500]'
-                        : 'w-2 bg-white/25 hover:bg-white/50'
-                    }`}
-                  />
+                    className="inline-flex h-6 min-w-6 px-1 items-center justify-center rounded-full"
+                  >
+                    <span
+                      className={`block h-2 rounded-full transition-[width,background-color] duration-300 ${
+                        isActive
+                          ? 'w-7 bg-[#B6F500] shadow-[0_0_10px_#B6F500]'
+                          : 'w-2 bg-white/25 hover:bg-white/50'
+                      }`}
+                    />
+                  </button>
                 );
               })}
             </div>

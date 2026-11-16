@@ -25,6 +25,7 @@ export const JSLogo: React.FC<JSLogoProps> = ({ size = 'sm', className = '' }) =
           className={`mt-0.5 rounded-full bg-gradient-to-r from-[#B6F500] via-[#B6F500] to-transparent shadow-[0_0_12px_rgba(182,245,0,0.8)] ${s.bar}`}
         />
       </div>
+      <span className="sr-only"> </span>
       <span
         className={`font-display font-bold uppercase text-white/95 leading-none ${s.inc}`}
       >

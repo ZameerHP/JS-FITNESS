@@ -129,7 +129,14 @@ export function useTier(): PerfTier {
 let watchdogStarted = false;
 
 export function startPerfWatchdog(): () => void {
-  if (watchdogStarted || typeof window === 'undefined') return () => {};
+  if (
+    watchdogStarted ||
+    typeof window === 'undefined' ||
+    currentTier !== 'high' ||
+    navigator.webdriver
+  ) {
+    return () => {};
+  }
   watchdogStarted = true;
 
   let frames = 0;

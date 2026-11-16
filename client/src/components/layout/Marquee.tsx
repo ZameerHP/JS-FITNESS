@@ -53,8 +53,10 @@ export const Marquee: React.FC = React.memo(() => {
       aria-label="Brand Motto Ticker"
       className="cv-section relative overflow-hidden border-t border-white/[0.06] bg-[#050505] py-5 select-none"
     >
+      <span className="sr-only">TRAIN. EAT. SLEEP. REPEAT.</span>
       <div
         ref={trackRef}
+        aria-hidden="true"
         className={`flex w-max items-center ${reducedMotion ? '' : 'marquee-track-anim'}`}
       >
         {items.map((_, idx) => (

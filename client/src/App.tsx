@@ -4,6 +4,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import { LazyMotion, domAnimation } from 'framer-motion';
 import { ContentProvider, useSiteContent } from './context/ContentContext';
 import { useLenis } from './hooks/useLenis';
+import { hasHardwareWebGL } from './lib/perfTier';
 import { ScrollProgress } from './components/layout/ScrollProgress';
 import { Preloader } from './components/layout/Preloader';
 import { PageTransition } from './components/layout/PageTransition';
@@ -58,28 +59,19 @@ const PublicShell: React.FC = () => {
   const isAdmin = location.pathname.startsWith('/admin');
   const showPerfHud =
     typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('perf') === '1';
-  const [preloaderDone, setPreloaderDone] = useState(false);
+  const [preloaderDone, setPreloaderDone] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    if (sessionStorage.getItem('js_preloader_seen')) return true;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return true;
+    const t = document.documentElement.dataset.perf || 'high';
+    return t !== 'high' || !hasHardwareWebGL();
+  });
 
   useLenis();
 
-  // Idle-time prefetch of most likely secondary pages (Membership & System)
-  useEffect(() => {
-    if (!preloaderDone || isAdmin) return;
-    const w = window as Window & {
-      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
-      cancelIdleCallback?: (id: number) => void;
-    };
-    const run = () => {
-      prefetchRoute('/membership');
-      prefetchRoute('/system');
-    };
-    if (w.requestIdleCallback) {
-      const id = w.requestIdleCallback(run, { timeout: 2500 });
-      return () => w.cancelIdleCallback?.(id);
-    }
-    const t = setTimeout(run, 1500);
-    return () => clearTimeout(t);
-  }, [preloaderDone, isAdmin]);
+  const handlePreloaderComplete = useCallback(() => {
+    setPreloaderDone(true);
+  }, []);
 
   const handlePrefetchCalendly = useCallback(() => {
     void loadCalendlyModal();
@@ -106,7 +98,7 @@ const PublicShell: React.FC = () => {
       <div className="relative min-h-screen bg-[#050505] text-white">
         <div aria-hidden="true" className="film-grain pointer-events-none fixed inset-0 z-[9970]" />
 
-        <Preloader onComplete={() => setPreloaderDone(true)} />
+        <Preloader onComplete={handlePreloaderComplete} />
         <ScrollProgress />
         <PageTransition />
         <CustomCursor />
