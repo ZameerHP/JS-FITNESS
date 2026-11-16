@@ -259,6 +259,19 @@ async function measureScrollAndHeap(browser) {
     };
   });
 
+  // 1 warmup pass so lazy route ES modules are cached before measuring leak growth across 10 loops
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(250);
+  const navHrefs = ['/about', '/membership', '/system', '/transformations', '/contact', '/'];
+  for (const href of navHrefs) {
+    if (href === '/') {
+      await page.locator('header a[aria-label="JS FITNESS INC Home"]').click();
+    } else {
+      await page.locator(`header nav a[href="${href}"]`).click();
+    }
+    await page.waitForTimeout(120);
+  }
+
   // 10-loop SPA route navigation heap leak check (real React Router mount/unmount)
   await cdp.send('Performance.enable');
   await cdp.send('HeapProfiler.enable');
@@ -266,7 +279,6 @@ async function measureScrollAndHeap(browser) {
   const m1 = await cdp.send('Performance.getMetrics');
   const startHeap = m1.metrics.find((m) => m.name === 'JSHeapUsedSize')?.value || 0;
 
-  const navHrefs = ['/about', '/membership', '/system', '/transformations', '/contact', '/'];
   for (let loop = 0; loop < 10; loop++) {
     for (const href of navHrefs) {
       if (href === '/') {

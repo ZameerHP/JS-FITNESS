@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { gsap, ScrollTrigger } from '../../lib/gsap';
+import { gsap } from '../../lib/gsap';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { scrollToTopImmediate } from '../../hooks/useLenis';
 
@@ -17,9 +17,6 @@ export const PageTransition: React.FC = React.memo(() => {
       firstMountRef.current = false;
       return;
     }
-
-    // Kill ScrollTriggers of leaving route cleanly
-    ScrollTrigger.getAll().forEach((st) => st.kill());
 
     if (reducedMotion || !overlayRef.current) return;
 

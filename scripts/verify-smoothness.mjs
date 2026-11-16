@@ -162,6 +162,16 @@ async function main() {
     });
     await page.waitForTimeout(250);
 
+    // 1 warmup pass so lazy route ES modules are cached before measuring leak growth across 10 loops
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(250);
+    const routes = ['/about', '/membership', '/system', '/transformations', '/contact', '/'];
+    for (const href of routes) {
+      if (href === '/') await page.locator('header a[aria-label="JS FITNESS INC Home"]').click();
+      else await page.locator(`header nav a[href="${href}"]`).click();
+      await page.waitForTimeout(120);
+    }
+
     // 10-loop SPA navigation heap leak test
     await cdp.send('Performance.enable');
     await cdp.send('HeapProfiler.enable');
@@ -170,7 +180,6 @@ async function main() {
       (m) => m.name === 'JSHeapUsedSize'
     )?.value || 0;
 
-    const routes = ['/about', '/membership', '/system', '/transformations', '/contact', '/'];
     for (let i = 0; i < 10; i++) {
       for (const href of routes) {
         if (href === '/') await page.locator('header a[aria-label="JS FITNESS INC Home"]').click();

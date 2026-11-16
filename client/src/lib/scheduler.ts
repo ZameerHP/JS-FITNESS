@@ -1,96 +1,44 @@
-import { ScrollTrigger } from './gsap';
-
 type QueueItem = {
   fn: () => void;
   cancelled: boolean;
 };
 
 const queue: QueueItem[] = [];
-let draining = false;
-let refreshTimer: number | null = null;
+let rafScheduled = false;
 
-function scheduleRefreshOnce(): void {
-  if (typeof window === 'undefined') return;
-  if (refreshTimer !== null) clearTimeout(refreshTimer);
-  refreshTimer = window.setTimeout(() => {
-    refreshTimer = null;
-    ScrollTrigger.refresh();
-  }, 120);
-}
-
-function yieldToMain(cb: () => void): void {
-  if (typeof MessageChannel !== 'undefined') {
-    const ch = new MessageChannel();
-    ch.port1.onmessage = () => cb();
-    ch.port2.postMessage(null);
-    return;
-  }
-  setTimeout(cb, 0);
-}
-
-function drainQueue(): void {
-  if (draining) return;
-  draining = true;
-
-  const step = () => {
-    const start = performance.now();
-    while (queue.length > 0) {
-      const item = queue.shift()!;
-      if (!item.cancelled) {
-        try {
-          item.fn();
-        } catch {
-          // Keep remaining tasks alive if one section setup throws
-        }
-      }
-      // Strictly yield back whenever chunk budget exceeds 8ms
-      if (performance.now() - start >= 8 && queue.length > 0) {
-        yieldToMain(step);
-        return;
+function flushQueue(): void {
+  rafScheduled = false;
+  while (queue.length > 0) {
+    const item = queue.shift()!;
+    if (!item.cancelled) {
+      try {
+        item.fn();
+      } catch {
+        // Keep remaining tasks alive if one setup throws
       }
     }
-    draining = false;
-    scheduleRefreshOnce();
-  };
-
-  yieldToMain(step);
+  }
 }
 
 /**
- * Schedules heavy non-critical setup work (below-the-fold ScrollTriggers, DOM prep)
- * in chunked tasks yielding every <= 8ms to keep INP and TBT low.
+ * Batches below-the-fold ScrollTrigger and animation setup callbacks into
+ * a single requestAnimationFrame pass on mount so triggers register before
+ * user scrolling begins without MessageChannel churn or late refreshes.
  */
 export function scheduleChunkedTask(
   fn: () => void,
-  priority: 'background' | 'user-visible' = 'background'
+  _priority: 'background' | 'user-visible' = 'background'
 ): () => void {
   if (typeof window === 'undefined') return () => {};
 
-  const win = window as Window & {
-    scheduler?: {
-      postTask: (cb: () => void, opts?: { priority?: string; signal?: AbortSignal }) => Promise<void>;
-    };
-  };
-
-  if (win.scheduler && typeof win.scheduler.postTask === 'function' && typeof AbortController !== 'undefined') {
-    const controller = new AbortController();
-    win.scheduler
-      .postTask(
-        () => {
-          if (!controller.signal.aborted) {
-            fn();
-            scheduleRefreshOnce();
-          }
-        },
-        { priority, signal: controller.signal }
-      )
-      .catch(() => {});
-    return () => controller.abort();
-  }
-
   const item: QueueItem = { fn, cancelled: false };
   queue.push(item);
-  drainQueue();
+
+  if (!rafScheduled) {
+    rafScheduled = true;
+    requestAnimationFrame(flushQueue);
+  }
+
   return () => {
     item.cancelled = true;
   };

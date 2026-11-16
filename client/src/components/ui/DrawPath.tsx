@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { gsap } from '../../lib/gsap';
+import { gsap, ScrollTrigger } from '../../lib/gsap';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 
 interface DrawPathProps {
@@ -32,28 +32,55 @@ export const DrawPath: React.FC<DrawPathProps> = ({
     if (!path) return;
 
     const len = path.getTotalLength();
+    const lenPx = `${len.toFixed(1)}px`;
     const targets = glow ? [glow, path] : [path];
 
     if (reducedMotion) {
-      gsap.set(targets, { strokeDasharray: len, strokeDashoffset: 0 });
+      targets.forEach((t) => {
+        t.style.strokeDasharray = lenPx;
+        t.style.strokeDashoffset = '0px';
+      });
       return;
     }
 
-    gsap.set(targets, { strokeDasharray: len, strokeDashoffset: len });
+    targets.forEach((t) => {
+      t.style.strokeDasharray = lenPx;
+      t.style.strokeDashoffset = lenPx;
+    });
 
     const ctx = gsap.context(() => {
-      gsap.to(targets, {
-        strokeDashoffset: 0,
-        duration: scrub ? undefined : duration,
-        ease: scrub ? 'none' : 'power3.out',
-        scrollTrigger: {
+      if (scrub) {
+        let lastOffset = '';
+        ScrollTrigger.create({
           trigger: path,
           start: 'top 90%',
-          end: scrub ? 'bottom 45%' : undefined,
-          scrub: scrub ? true : false,
-          once: !scrub,
-        },
-      });
+          end: 'bottom 45%',
+          onUpdate: (self) => {
+            const v = `${(len * (1 - self.progress)).toFixed(1)}px`;
+            if (v === lastOffset) return;
+            lastOffset = v;
+            path.style.strokeDashoffset = v;
+            if (glow) glow.style.strokeDashoffset = v;
+          },
+        });
+      } else {
+        const state = { p: 1 };
+        gsap.to(state, {
+          p: 0,
+          duration,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: path,
+            start: 'top 90%',
+            once: true,
+          },
+          onUpdate: () => {
+            const v = `${(len * state.p).toFixed(1)}px`;
+            path.style.strokeDashoffset = v;
+            if (glow) glow.style.strokeDashoffset = v;
+          },
+        });
+      }
     }, path);
 
     return () => ctx.revert();

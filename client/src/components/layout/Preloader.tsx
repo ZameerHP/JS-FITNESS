@@ -79,16 +79,29 @@ export const Preloader: React.FC<PreloaderProps> = ({ onComplete }) => {
         { scaleX: 1, duration: 0.45, ease: 'power3.out' }
       );
 
-      [jsStrokeJRef.current, jsStrokeSRef.current].forEach((p) => {
-        if (p) {
-          const len = p.getTotalLength();
-          gsap.set(p, { strokeDasharray: len, strokeDashoffset: len });
-        }
-      });
+      const strokeItems = [jsStrokeJRef.current, jsStrokeSRef.current]
+        .filter(Boolean)
+        .map((p) => {
+          const len = p!.getTotalLength();
+          const lenPx = `${len.toFixed(1)}px`;
+          p!.style.strokeDasharray = lenPx;
+          p!.style.strokeDashoffset = lenPx;
+          return { el: p!, len };
+        });
 
+      const strokeObj = { p: 1 };
       tl.to(
-        [jsStrokeJRef.current, jsStrokeSRef.current],
-        { strokeDashoffset: 0, duration: 0.75, stagger: 0.12, ease: 'power2.inOut' },
+        strokeObj,
+        {
+          p: 0,
+          duration: 0.85,
+          ease: 'power2.inOut',
+          onUpdate: () => {
+            for (let i = 0; i < strokeItems.length; i += 1) {
+              strokeItems[i].el.style.strokeDashoffset = `${(strokeItems[i].len * strokeObj.p).toFixed(1)}px`;
+            }
+          },
+        },
         0.25
       );
 

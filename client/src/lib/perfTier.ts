@@ -3,17 +3,6 @@ import { gsap } from './gsap';
 
 export type PerfTier = 'high' | 'medium' | 'low';
 
-export function detectTier(): PerfTier {
-  if (typeof window === 'undefined') return 'high';
-  const touch = window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768;
-  const cores = navigator.hardwareConcurrency || 4;
-  const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory || 4;
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (reduce || cores <= 2 || mem <= 2) return 'low';
-  if (touch || cores <= 4 || mem <= 4) return 'medium';
-  return 'high';
-}
-
 let hwWebGLCache: boolean | null = null;
 
 /** Returns true only when genuine hardware-accelerated WebGL is available (rejects SwiftShader/software renderers). */
@@ -54,17 +43,40 @@ export function hasHardwareWebGL(): boolean {
   }
 }
 
-let currentTier: PerfTier =
-  typeof document !== 'undefined' &&
-  (document.documentElement.dataset.perf as PerfTier | undefined)
-    ? (document.documentElement.dataset.perf as PerfTier)
-    : detectTier();
+export function detectTier(): PerfTier {
+  if (typeof window === 'undefined') return 'high';
+  const param = new URLSearchParams(window.location.search).get('tier');
+  if (param === 'high' || param === 'medium' || param === 'low') return param;
+  const touch = window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768;
+  const cores = navigator.hardwareConcurrency || 4;
+  const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory || 4;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduce || cores <= 2 || mem <= 2) return 'low';
+  if (touch || cores <= 4 || mem <= 4 || !hasHardwareWebGL()) return 'medium';
+  return 'high';
+}
+
+let currentTier: PerfTier = (() => {
+  if (typeof window !== 'undefined') {
+    const param = new URLSearchParams(window.location.search).get('tier');
+    if (param === 'high' || param === 'medium' || param === 'low') return param;
+  }
+  if (
+    typeof document !== 'undefined' &&
+    (document.documentElement.dataset.perf as PerfTier | undefined)
+  ) {
+    return document.documentElement.dataset.perf as PerfTier;
+  }
+  return detectTier();
+})();
 
 if (typeof document !== 'undefined') {
   document.documentElement.dataset.perf = currentTier;
 }
 
 const listeners = new Set<(tier: PerfTier) => void>();
+let deferTierTimer: number | null = null;
+let deferTierIdleId: number | null = null;
 
 export function getTier(): PerfTier {
   return currentTier;
@@ -77,7 +89,27 @@ export function downgradeTier(): void {
   if (typeof document !== 'undefined') {
     document.documentElement.dataset.perf = next;
   }
-  listeners.forEach((fn) => fn(next));
+  if (typeof window === 'undefined') return;
+  if (deferTierTimer !== null) clearTimeout(deferTierTimer);
+  const w = window as Window & {
+    requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+    cancelIdleCallback?: (id: number) => void;
+  };
+  if (deferTierIdleId !== null) w.cancelIdleCallback?.(deferTierIdleId);
+
+  const notify = () => {
+    deferTierTimer = null;
+    deferTierIdleId = null;
+    listeners.forEach((fn) => fn(next));
+  };
+
+  deferTierTimer = window.setTimeout(() => {
+    if (w.requestIdleCallback) {
+      deferTierIdleId = w.requestIdleCallback(notify, { timeout: 1500 });
+    } else {
+      notify();
+    }
+  }, 800);
 }
 
 export function subscribeTier(fn: (tier: PerfTier) => void): () => void {

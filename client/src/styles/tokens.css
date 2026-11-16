@@ -226,11 +226,6 @@ html[data-perf='high'] .glass-blur {
   backdrop-filter: blur(12px);
 }
 
-html[data-perf='medium'] .navbar-scrolled {
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-}
-
 @media (pointer: coarse) {
   .navbar-scrolled,
   .glass-blur {

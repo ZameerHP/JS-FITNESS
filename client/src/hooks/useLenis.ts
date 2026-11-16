@@ -26,8 +26,13 @@ export function subscribeScroll(cb: (scrollY: number, limit: number) => void): (
 export function scrollToTopImmediate(): void {
   if (lenisSingleton) {
     lenisSingleton.scrollTo(0, { immediate: true });
-  } else {
+  } else if (typeof window !== 'undefined') {
     window.scrollTo(0, 0);
+  }
+  if (typeof document !== 'undefined') {
+    const limit =
+      document.documentElement.scrollHeight - document.documentElement.clientHeight;
+    scrollSubscribers.forEach((cb) => cb(0, Math.max(0, limit)));
   }
 }
 
@@ -54,12 +59,26 @@ export function useLenis() {
     const disableLenis = reducedMotion || tier === 'low';
     let resizeTimer: ReturnType<typeof setTimeout> | null = null;
     let resizeObserver: ResizeObserver | null = null;
+    let lastBodyHeight = document.body.scrollHeight;
+    let lastScrollTime = 0;
+    let lastDispatchedY = -1;
 
-    const triggerDebouncedRefresh = () => {
+    const scheduleSettledRefresh = () => {
       if (resizeTimer) clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
+        if (performance.now() - lastScrollTime < 300) {
+          scheduleSettledRefresh();
+          return;
+        }
+        lastBodyHeight = document.body.scrollHeight;
         ScrollTrigger.refresh();
-      }, 200);
+      }, 220);
+    };
+
+    const triggerDebouncedRefresh = () => {
+      const nextHeight = document.body.scrollHeight;
+      if (Math.abs(nextHeight - lastBodyHeight) <= 8) return;
+      scheduleSettledRefresh();
     };
 
     if (typeof ResizeObserver !== 'undefined') {
@@ -69,17 +88,24 @@ export function useLenis() {
 
     if (document.fonts && document.fonts.ready) {
       document.fonts.ready.then(() => {
-        triggerDebouncedRefresh();
+        scheduleSettledRefresh();
       });
     }
+
+    const notifyScroll = (scrollVal: number, limitVal: number) => {
+      lastScrollTime = performance.now();
+      if (scrollVal === lastDispatchedY) return;
+      lastDispatchedY = scrollVal;
+      ScrollTrigger.update();
+      scrollSubscribers.forEach((cb) => cb(scrollVal, limitVal));
+    };
 
     if (disableLenis) {
       const onNativeScroll = () => {
         const scrollTop = window.scrollY || document.documentElement.scrollTop;
         const limit =
           document.documentElement.scrollHeight - document.documentElement.clientHeight;
-        ScrollTrigger.update();
-        scrollSubscribers.forEach((cb) => cb(scrollTop, limit));
+        notifyScroll(scrollTop, limit);
       };
       window.addEventListener('scroll', onNativeScroll, { passive: true });
       cleanupEngine = () => {
@@ -99,14 +125,21 @@ export function useLenis() {
 
       const handleLenisScroll = (e: { scroll?: number; limit?: number; velocity?: number }) => {
         globalScrollVelocity = e.velocity ?? 0;
-        ScrollTrigger.update();
         const scrollVal = e.scroll ?? window.scrollY;
         const limitVal =
           e.limit ?? document.documentElement.scrollHeight - document.documentElement.clientHeight;
-        scrollSubscribers.forEach((cb) => cb(scrollVal, limitVal));
+        notifyScroll(scrollVal, limitVal);
+      };
+
+      const onWindowScroll = () => {
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        const limit =
+          document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        notifyScroll(scrollTop, limit);
       };
 
       lenis.on('scroll', handleLenisScroll);
+      window.addEventListener('scroll', onWindowScroll, { passive: true });
 
       const tick = (t: number) => {
         lenis.raf(t * 1000);
@@ -118,6 +151,7 @@ export function useLenis() {
       cleanupEngine = () => {
         gsap.ticker.remove(tick);
         lenis.off('scroll', handleLenisScroll);
+        window.removeEventListener('scroll', onWindowScroll);
         lenis.destroy();
         lenisSingleton = null;
         globalScrollVelocity = 0;

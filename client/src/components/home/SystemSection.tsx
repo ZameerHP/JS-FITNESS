@@ -37,10 +37,8 @@ export const SystemSection: React.FC = React.memo(() => {
     if (reducedMotion || tier === 'low') {
       if (pctRef.current) pctRef.current.textContent = '92%';
       if (circle) {
-        gsap.set(circle, {
-          strokeDasharray: circumference,
-          strokeDashoffset: circumference - 0.92 * circumference,
-        });
+        circle.style.strokeDasharray = `${circumference.toFixed(1)}px`;
+        circle.style.strokeDashoffset = `${(circumference - 0.92 * circumference).toFixed(1)}px`;
       }
       return;
     }
@@ -94,17 +92,19 @@ export const SystemSection: React.FC = React.memo(() => {
         });
 
         if (orbitCometRef.current) {
-          cometTween = gsap.fromTo(
-            orbitCometRef.current,
-            { strokeDashoffset: 840 },
-            {
-              strokeDashoffset: 0,
-              duration: 4.5,
-              repeat: -1,
-              ease: 'none',
-              paused: true,
-            }
-          );
+          const cometEl = orbitCometRef.current;
+          cometEl.style.strokeDashoffset = '840px';
+          const cometObj = { offset: 840 };
+          cometTween = gsap.to(cometObj, {
+            offset: 0,
+            duration: 4.5,
+            repeat: -1,
+            ease: 'none',
+            paused: true,
+            onUpdate: () => {
+              cometEl.style.strokeDashoffset = `${cometObj.offset.toFixed(1)}px`;
+            },
+          });
         }
 
         if (tier === 'high' && athleteRef.current) {
@@ -125,10 +125,8 @@ export const SystemSection: React.FC = React.memo(() => {
         }
 
         if (circle) {
-          gsap.set(circle, {
-            strokeDasharray: circumference,
-            strokeDashoffset: circumference,
-          });
+          circle.style.strokeDasharray = `${circumference.toFixed(1)}px`;
+          circle.style.strokeDashoffset = `${circumference.toFixed(1)}px`;
 
           const obj = { val: 0 };
           let lastPct = -1;
@@ -146,7 +144,7 @@ export const SystemSection: React.FC = React.memo(() => {
               if (v !== lastPct) {
                 lastPct = v;
                 if (pctRef.current) pctRef.current.textContent = `${v}%`;
-                circle.style.strokeDashoffset = String(circumference - (v / 100) * circumference);
+                circle.style.strokeDashoffset = `${(circumference - (v / 100) * circumference).toFixed(1)}px`;
               }
             },
           });

@@ -66,11 +66,12 @@ export const FeatureStrip: React.FC = React.memo(() => {
     let ctx: gsap.Context | null = null;
     const cancelTask = scheduleChunkedTask(() => {
       const strokes = el.querySelectorAll<SVGGeometryElement>('.feature-stroke');
-      strokes.forEach((s) => {
-        if (typeof s.getTotalLength === 'function') {
-          const len = s.getTotalLength();
-          gsap.set(s, { strokeDasharray: len, strokeDashoffset: len });
-        }
+      const strokeItems = Array.from(strokes).map((s) => {
+        const len = typeof s.getTotalLength === 'function' ? s.getTotalLength() : 100;
+        const px = `${len.toFixed(1)}px`;
+        s.style.strokeDasharray = px;
+        s.style.strokeDashoffset = px;
+        return { s, len };
       });
 
       ctx = gsap.context(() => {
@@ -91,15 +92,22 @@ export const FeatureStrip: React.FC = React.memo(() => {
           }
         );
 
-        gsap.to(strokes, {
-          strokeDashoffset: 0,
+        const strokeState = { p: 1 };
+        gsap.to(strokeState, {
+          p: 0,
           duration: 0.75,
-          stagger: 0.05,
           ease: 'power2.out',
           scrollTrigger: {
             trigger: el,
             start: 'top 90%',
             once: true,
+          },
+          onUpdate: () => {
+            const p = strokeState.p;
+            for (let i = 0; i < strokeItems.length; i += 1) {
+              const item = strokeItems[i];
+              item.s.style.strokeDashoffset = `${(item.len * p).toFixed(1)}px`;
+            }
           },
         });
       }, el);

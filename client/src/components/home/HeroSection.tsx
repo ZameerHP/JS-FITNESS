@@ -175,8 +175,31 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
         ) as SVGPolygonElement[];
         if (polyTargets.length > 0) {
           const len = polyTargets[0].getTotalLength();
-          gsap.set(polyTargets, { strokeDasharray: len, strokeDashoffset: len, opacity: 0.4 });
-          tl.to(polyTargets, { strokeDashoffset: 0, opacity: 1, duration: 1.3, ease: 'power3.out' }, 0.1);
+          const lenPx = `${len.toFixed(1)}px`;
+          polyTargets.forEach((pt) => {
+            pt.style.strokeDasharray = lenPx;
+            pt.style.strokeDashoffset = lenPx;
+            pt.style.opacity = '0.4';
+          });
+          const triState = { p: 1, op: 0.4 };
+          tl.to(
+            triState,
+            {
+              p: 0,
+              op: 1,
+              duration: 1.3,
+              ease: 'power3.out',
+              onUpdate: () => {
+                const off = `${(len * triState.p).toFixed(1)}px`;
+                const op = triState.op.toFixed(2);
+                for (let i = 0; i < polyTargets.length; i += 1) {
+                  polyTargets[i].style.strokeDashoffset = off;
+                  polyTargets[i].style.opacity = op;
+                }
+              },
+            },
+            0.1
+          );
         }
 
         // GPU-only athlete entrance keeping opacity: 1 for immediate LCP paint
