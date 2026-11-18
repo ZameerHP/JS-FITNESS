@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { loadGsap, getLoadedGsap } from '../../lib/gsapBridge';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { useTier } from '../../lib/perfTier';
 
 interface MagneticProps {
   children: React.ReactNode;
@@ -79,8 +78,7 @@ const MagneticInteractive: React.FC<MagneticProps> = ({
 export const Magnetic: React.FC<MagneticProps> = React.memo(
   ({ children, maxPull = 8, className = '' }) => {
     const reducedMotion = useReducedMotion();
-    const tier = useTier();
-    if (reducedMotion || tier !== 'high' || navigator.webdriver) {
+    if (reducedMotion) {
       return <div className={`inline-block ${className}`}>{children}</div>;
     }
     return (

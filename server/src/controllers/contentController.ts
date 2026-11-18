@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma.js';
 import { env } from '../config/env.js';
 
-export const prisma = new PrismaClient();
+export { prisma };
 
 let contentCache: { payload: unknown; timestamp: number } | null = null;
 const CACHE_TTL_MS = 60 * 1000;
@@ -180,14 +180,14 @@ export async function buildPublicContent() {
 export async function getPublicContent(_req: Request, res: Response): Promise<void> {
   try {
     if (contentCache && Date.now() - contentCache.timestamp < CACHE_TTL_MS) {
-      res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=600');
+      res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=60, stale-while-revalidate=600');
       res.json(contentCache.payload);
       return;
     }
 
     const payload = await buildPublicContent();
     contentCache = { payload, timestamp: Date.now() };
-    res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=600');
+    res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=60, stale-while-revalidate=600');
     res.json(payload);
   } catch (error) {
     console.error('Error building public content:', error);

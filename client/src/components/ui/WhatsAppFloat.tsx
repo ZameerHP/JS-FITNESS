@@ -1,30 +1,30 @@
 import React from 'react';
-import { MessageCircle } from 'lucide-react';
 import { useSiteContent } from '../../context/ContentContext';
-import { useTier } from '../../lib/perfTier';
 import { Magnetic } from './Magnetic';
+import { WhatsAppIcon } from './Icons';
 
 export const WhatsAppFloat: React.FC = React.memo(() => {
   const { config } = useSiteContent();
-  const tier = useTier();
+  const rawUrl = (config.contact.whatsappUrl || '').trim();
+  const digits = (config.contact.whatsappNumber || '14037047021').replace(/[^0-9]/g, '');
+  const href = rawUrl || `https://wa.me/${digits.startsWith('1') ? digits : `1${digits}`}`;
 
   return (
     <div className="fixed bottom-6 right-6 z-40">
       <Magnetic maxPull={6}>
         <a
-          href={config.contact.whatsappUrl || 'https://wa.me/14037047021'}
+          href={href}
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Chat with JS FITNESS INC on WhatsApp"
-          className="group relative flex h-13 w-13 min-h-[52px] min-w-[52px] items-center justify-center rounded-full bg-[#0B0B0C] border border-[#B6F500]/60 text-[#B6F500] shadow-[0_0_24px_rgba(182,245,0,0.3)] transition-colors duration-200 hover:bg-[#B6F500] hover:text-[#050505]"
+          title="WhatsApp JS FITNESS INC (403-704-7021)"
+          className="group whatsapp-breathe relative flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[#0B0B0C] border-[1.5px] border-[#B6F500]/70 text-[#B6F500] transition-colors duration-200 hover:bg-[#B6F500] hover:text-[#050505]"
         >
-          {tier === 'high' && (
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute -inset-1.5 rounded-full border border-[#B6F500]/45 pulse-ring-anim"
-            />
-          )}
-          <MessageCircle className="w-6 h-6" />
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -inset-1.5 rounded-full border border-[#B6F500]/45 whatsapp-pulse-ring"
+          />
+          <WhatsAppIcon className="relative z-10 w-6 h-6" />
         </a>
       </Magnetic>
     </div>

@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { loadGsap } from '../../lib/gsapBridge';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { useTier } from '../../lib/perfTier';
 
 interface DrawPathProps {
   d: string;
@@ -27,7 +26,6 @@ export const DrawPath: React.FC<DrawPathProps> = ({
   const pathRef = useRef<SVGPathElement>(null);
   const glowRef = useRef<SVGPathElement>(null);
   const reducedMotion = useReducedMotion();
-  const tier = useTier();
 
   useEffect(() => {
     const group = groupRef.current;
@@ -35,9 +33,7 @@ export const DrawPath: React.FC<DrawPathProps> = ({
     const glow = glowRef.current;
     if (!group || !path) return;
 
-    const interactiveHigh = tier === 'high' && !reducedMotion && !navigator.webdriver;
-
-    if (!interactiveHigh) {
+    if (reducedMotion) {
       group.style.opacity = '1';
       group.style.transform = 'translate3d(0, 0, 0)';
       return;
@@ -101,7 +97,7 @@ export const DrawPath: React.FC<DrawPathProps> = ({
     );
     io.observe(group);
     return () => io.disconnect();
-  }, [d, scrub, duration, reducedMotion, tier]);
+  }, [d, scrub, duration, reducedMotion]);
 
   return (
     <g ref={groupRef} className={className}>

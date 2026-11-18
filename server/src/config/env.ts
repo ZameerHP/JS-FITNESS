@@ -3,13 +3,18 @@ import path from 'path';
 import fs from 'fs';
 
 const rootEnv = path.resolve(process.cwd(), '../.env');
+const rootLocalEnv = path.resolve(process.cwd(), '../.env.local');
 const localEnv = path.resolve(process.cwd(), '.env');
 
 if (fs.existsSync(localEnv)) {
   dotenv.config({ path: localEnv });
-} else if (fs.existsSync(rootEnv)) {
+}
+if (fs.existsSync(rootLocalEnv)) {
+  dotenv.config({ path: rootLocalEnv });
+}
+if (fs.existsSync(rootEnv)) {
   dotenv.config({ path: rootEnv });
-} else {
+} else if (!fs.existsSync(localEnv)) {
   dotenv.config();
 }
 
@@ -17,8 +22,26 @@ export const env = {
   port: Number(process.env.PORT || 4000),
   nodeEnv: process.env.NODE_ENV || 'development',
   isProd: process.env.NODE_ENV === 'production',
+  isVercel: process.env.VERCEL === '1' || Boolean(process.env.VERCEL_ENV),
+  vercelUrl: process.env.VERCEL_URL || '',
+  vercelProdUrl: process.env.VERCEL_PROJECT_PRODUCTION_URL || '',
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
   cookieSecure: process.env.COOKIE_SECURE === 'true',
+  databaseUrl: process.env.DATABASE_URL || '',
+  directUrl: process.env.DIRECT_URL || '',
+  supabaseUrl: (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim(),
+  supabaseAnonKey: (
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.SUPABASE_PUBLISHABLE_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY ||
+    ''
+  ).trim(),
+  supabaseServiceRoleKey: (
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SECRET_KEY ||
+    ''
+  ).trim(),
+  supabaseStorageBucket: (process.env.SUPABASE_STORAGE_BUCKET || 'media').trim(),
   jwtSecret: process.env.JWT_SECRET || 'js-fitness-dev-secret-change-in-production',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   adminEmail: process.env.ADMIN_EMAIL || 'admin@jsfitness.ca',

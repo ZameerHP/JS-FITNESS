@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { loadGsap } from '../../lib/gsapBridge';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { useTier } from '../../lib/perfTier';
 import { subscribePointerTick } from '../../lib/pointer';
 
 export const CustomCursor: React.FC = React.memo(() => {
@@ -9,13 +8,12 @@ export const CustomCursor: React.FC = React.memo(() => {
   const ringRef = useRef<HTMLDivElement>(null);
   const labelRef = useRef<HTMLSpanElement>(null);
   const reducedMotion = useReducedMotion();
-  const tier = useTier();
 
   const isCoarse =
     typeof window !== 'undefined' &&
     (window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 1024);
 
-  const enabled = !reducedMotion && tier === 'high' && !isCoarse;
+  const enabled = !reducedMotion && !isCoarse;
 
   useEffect(() => {
     if (!enabled || !dotRef.current || !ringRef.current || !labelRef.current) return;

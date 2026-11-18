@@ -7,12 +7,16 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
-    "prisma:seed": "tsx prisma/seed.ts"
+    "prisma:seed": "tsx prisma/seed.ts",
+    "supabase:migrate": "tsx scripts/migrate-to-supabase.ts",
+    "supabase:verify": "tsx scripts/verify-supabase.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "@supabase/supabase-js": "^2.119.0",
     "bcrypt": "^5.1.1",
     "compression": "^1.8.2",
     "cookie-parser": "^1.4.7",

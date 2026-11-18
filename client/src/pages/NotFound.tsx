@@ -4,7 +4,7 @@ import { SEOHead } from '../components/ui/SEOHead';
 
 export const NotFound: React.FC = () => {
   return (
-    <div className="min-h-[82vh] flex items-center justify-center px-5 bg-[#050505] pt-[72px]">
+    <div className="min-h-[82vh] flex items-center justify-center px-5 bg-[#050505] pt-[76px]">
       <SEOHead title="Page Not Found" path="/404" />
       <div className="text-center max-w-lg">
         <div className="font-display italic font-black text-[120px] leading-none text-[#B6F500] text-lime-glow">

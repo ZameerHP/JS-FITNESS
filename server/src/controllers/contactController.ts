@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { prisma } from './contentController.js';
+import { prisma } from '../lib/prisma.js';
 import { sendContactNotification } from '../services/mail.js';
 
 const contactSchema = z.object({
@@ -51,16 +51,20 @@ export async function submitContactForm(req: Request, res: Response): Promise<vo
       }
     }
 
-    await sendContactNotification(
-      {
-        name: data.name,
-        email: data.email,
-        phone: data.phone || '',
-        interest: data.interest,
-        message: data.message,
-      },
-      recipientEmail
-    );
+    try {
+      await sendContactNotification(
+        {
+          name: data.name,
+          email: data.email,
+          phone: data.phone || '',
+          interest: data.interest,
+          message: data.message,
+        },
+        recipientEmail
+      );
+    } catch (mailError) {
+      console.error('Contact submission saved, but SMTP notification failed:', mailError);
+    }
 
     res.status(201).json({
       success: true,

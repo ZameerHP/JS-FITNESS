@@ -22,6 +22,7 @@ export const SEOHead: React.FC<SEOHeadProps> = React.memo(({ title, description,
         name: 'JS FITNESS INC',
         description: desc,
         url: 'https://jsfitness.ca',
+        logo: 'https://jsfitness.ca/images/js-logo.png',
         telephone: config.contact.phone,
         email: config.contact.email,
         address: {

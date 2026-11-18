@@ -4,69 +4,74 @@ import { MapPin, Phone, Mail, Instagram, Youtube, Facebook } from 'lucide-react'
 import { loadGsap } from '../../lib/gsapBridge';
 import { useSiteContent } from '../../context/ContentContext';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { useTier } from '../../lib/perfTier';
-import { onFirstUserInteraction, scheduleChunkedTask } from '../../lib/scheduler';
+import { scheduleChunkedTask } from '../../lib/scheduler';
 import { JSLogo } from '../ui/JSLogo';
+import { Button } from '../ui/Button';
 import { Magnetic } from '../ui/Magnetic';
-
-const TikTokIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
-    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V8.81a8.27 8.27 0 0 0 4.83 1.56V6.92a4.85 4.85 0 0 1-1.07-.23Z" />
-  </svg>
-);
+import { TikTokIcon } from '../ui/Icons';
 
 export const Footer: React.FC = React.memo(() => {
-  const { config } = useSiteContent();
+  const { config, openBooking } = useSiteContent();
   const plateRef = useRef<HTMLImageElement>(null);
   const footerRef = useRef<HTMLElement>(null);
   const reducedMotion = useReducedMotion();
-  const tier = useTier();
 
   useEffect(() => {
-    if (reducedMotion || tier !== 'high' || navigator.webdriver || !plateRef.current || !footerRef.current)
-      return;
+    if (reducedMotion || !plateRef.current || !footerRef.current) return;
     let cancelled = false;
     let ctx: gsap.Context | null = null;
-    let cancelTask: (() => void) | null = null;
-    const cancelInteract = onFirstUserInteraction(() => {
-      cancelTask = scheduleChunkedTask(() => {
-        loadGsap().then(({ gsap }) => {
-          if (cancelled || !plateRef.current || !footerRef.current) return;
-          ctx = gsap.context(() => {
-            gsap.to(plateRef.current, {
-              rotation: 90,
-              ease: 'none',
-              scrollTrigger: {
-                trigger: footerRef.current,
-                start: 'top bottom',
-                end: 'bottom bottom',
-                scrub: true,
-              },
-            });
-          }, footerRef);
-        });
+    const cancelTask = scheduleChunkedTask(() => {
+      loadGsap().then(({ gsap }) => {
+        if (cancelled || !plateRef.current || !footerRef.current) return;
+        ctx = gsap.context(() => {
+          gsap.to(plateRef.current, {
+            rotation: 90,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: footerRef.current,
+              start: 'top bottom',
+              end: 'bottom bottom',
+              scrub: true,
+            },
+          });
+        }, footerRef);
       });
     });
 
     return () => {
       cancelled = true;
-      cancelInteract();
       cancelTask?.();
       ctx?.revert();
     };
-  }, [reducedMotion, tier]);
+  }, [reducedMotion]);
 
   const socialItems = [
-    { name: 'Instagram', href: config.socials.instagram, icon: <Instagram className="w-4 h-4" /> },
-    { name: 'TikTok', href: config.socials.tiktok, icon: <TikTokIcon className="w-4 h-4" /> },
-    { name: 'YouTube', href: config.socials.youtube, icon: <Youtube className="w-4 h-4" /> },
-    { name: 'Facebook', href: config.socials.facebook, icon: <Facebook className="w-4 h-4" /> },
+    {
+      name: 'Instagram',
+      href: config.socials.instagram,
+      icon: <Instagram className="w-4 h-4" strokeWidth={1.85} />,
+    },
+    {
+      name: 'TikTok',
+      href: config.socials.tiktok,
+      icon: <TikTokIcon className="w-4 h-4" />,
+    },
+    {
+      name: 'YouTube',
+      href: config.socials.youtube,
+      icon: <Youtube className="w-4 h-4" strokeWidth={1.85} />,
+    },
+    {
+      name: 'Facebook',
+      href: config.socials.facebook,
+      icon: <Facebook className="w-4 h-4" strokeWidth={1.85} />,
+    },
   ];
 
   return (
     <footer
       ref={footerRef}
-      className="cv-section relative overflow-hidden bg-[#050505] pt-12 pb-8"
+      className="cv-section relative overflow-hidden bg-[#050505] pt-14 pb-24"
     >
       <div
         aria-hidden="true"
@@ -82,13 +87,16 @@ export const Footer: React.FC = React.memo(() => {
         aria-hidden="true"
         loading="lazy"
         decoding="async"
-        className="pointer-events-none hidden md:block absolute -right-24 top-1/2 -translate-y-1/2 w-56 h-56 object-contain opacity-65 select-none"
+        className="pointer-events-none hidden md:block absolute -right-24 top-1/2 -translate-y-1/2 w-56 h-56 object-contain opacity-60 select-none"
       />
 
       <div className="relative z-10 mx-auto max-w-[1280px] px-5 lg:px-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-0 pb-10">
-          <div className="lg:pr-8 flex flex-col justify-center">
-            <Link to="/">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-0 pb-10 items-start">
+          <div className="lg:pr-8 flex flex-col items-start">
+            <Link
+              to="/"
+              className="inline-flex w-fit transition-transform duration-200 hover:scale-[1.03]"
+            >
               <JSLogo size="md" />
             </Link>
             <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.28em] text-[#8C8C8C]">
@@ -96,15 +104,15 @@ export const Footer: React.FC = React.memo(() => {
             </p>
           </div>
 
-          <div className="lg:px-8 lg:border-l lg:border-white/10">
+          <div className="lg:px-8 lg:border-l lg:border-white/10 h-full">
             <h3 className="text-sm font-bold text-white mb-4">Contact Info</h3>
             <ul className="space-y-3 text-xs text-[#C9C9C9]">
               <li className="flex items-start gap-2.5">
-                <MapPin className="w-4 h-4 text-[#B6F500] shrink-0 mt-0.5" />
+                <MapPin className="w-4 h-4 text-[#B6F500] shrink-0 mt-0.5" strokeWidth={1.85} />
                 <span>{config.contact.address}</span>
               </li>
               <li className="flex items-center gap-2.5">
-                <Phone className="w-4 h-4 text-[#B6F500] shrink-0" />
+                <Phone className="w-4 h-4 text-[#B6F500] shrink-0" strokeWidth={1.85} />
                 <a
                   href={`tel:${config.contact.phone.replace(/[^0-9+]/g, '')}`}
                   className="hover:text-[#B6F500] transition-colors"
@@ -113,7 +121,7 @@ export const Footer: React.FC = React.memo(() => {
                 </a>
               </li>
               <li className="flex items-center gap-2.5">
-                <Mail className="w-4 h-4 text-[#B6F500] shrink-0" />
+                <Mail className="w-4 h-4 text-[#B6F500] shrink-0" strokeWidth={1.85} />
                 <a
                   href={`mailto:${config.contact.email}`}
                   className="hover:text-[#B6F500] transition-colors break-all"
@@ -124,7 +132,7 @@ export const Footer: React.FC = React.memo(() => {
             </ul>
           </div>
 
-          <div className="lg:px-8 lg:border-l lg:border-white/10">
+          <div className="lg:px-8 lg:border-l lg:border-white/10 h-full">
             <h3 className="text-sm font-bold text-white mb-4">Follow Us</h3>
             <div className="flex items-center gap-3">
               {socialItems.map((item) => (
@@ -134,20 +142,31 @@ export const Footer: React.FC = React.memo(() => {
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`Follow Jatinder Singh on ${item.name}`}
-                    className="flex h-10 w-10 items-center justify-center rounded-full border border-[#B6F500]/45 bg-white/[0.03] text-white hover:bg-[#B6F500] hover:text-[#050505] transition-colors duration-200"
+                    title={item.name}
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-[#B6F500]/45 bg-white/[0.03] text-white transition-all duration-200 hover:-translate-y-0.5 hover:border-[#B6F500] hover:bg-[#B6F500] hover:text-[#050505] hover:shadow-[0_0_18px_rgba(182,245,0,0.45)]"
                   >
                     {item.icon}
                   </a>
                 </Magnetic>
               ))}
             </div>
+            <p className="mt-4 text-[11px] text-[#8C8C8C]">
+              Daily training clips, transformations, and community updates.
+            </p>
           </div>
 
-          <div className="lg:pl-8 lg:border-l lg:border-white/10">
-            <h3 className="text-sm font-bold text-white mb-4">Hours</h3>
-            <div className="space-y-2 text-xs text-[#C9C9C9]">
-              <p className="text-white font-medium">{config.hours.gymAccess}</p>
-              <p>{config.hours.personalTraining}</p>
+          <div className="lg:pl-8 lg:border-l lg:border-white/10 h-full flex flex-col justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-bold text-white mb-4">Hours</h3>
+              <div className="space-y-2 text-xs text-[#C9C9C9]">
+                <p className="text-white font-medium">{config.hours.gymAccess}</p>
+                <p>{config.hours.personalTraining}</p>
+              </div>
+            </div>
+            <div>
+              <Button variant="nav" onClick={() => openBooking('tour')}>
+                BOOK FREE GYM TOUR
+              </Button>
             </div>
           </div>
         </div>

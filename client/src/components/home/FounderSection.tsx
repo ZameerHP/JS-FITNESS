@@ -1,15 +1,15 @@
 import React, { useEffect, useRef } from 'react';
+import { Award } from 'lucide-react';
 import { loadGsap } from '../../lib/gsapBridge';
 import { HOME_COPY } from '../../config/siteConfig';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { useTier } from '../../lib/perfTier';
-import { onFirstUserInteraction, scheduleChunkedTask } from '../../lib/scheduler';
+import { scheduleChunkedTask } from '../../lib/scheduler';
 import { Button } from '../ui/Button';
 import { SplitReveal } from '../ui/SplitReveal';
+import { Reveal } from '../ui/Reveal';
 
 export const FounderSection: React.FC = React.memo(() => {
   const reducedMotion = useReducedMotion();
-  const tier = useTier();
   const sectionRef = useRef<HTMLElement>(null);
   const photoWrapRef = useRef<HTMLDivElement>(null);
   const photoImgRef = useRef<HTMLImageElement>(null);
@@ -20,24 +20,22 @@ export const FounderSection: React.FC = React.memo(() => {
 
   useEffect(() => {
     const el = sectionRef.current;
-    if (!el || reducedMotion || tier !== 'high' || navigator.webdriver) return;
+    if (!el || reducedMotion) return;
 
     let cancelled = false;
     let ctx: gsap.Context | null = null;
-    let cancelTask: (() => void) | null = null;
-    const cancelInteract = onFirstUserInteraction(() => {
-      cancelTask = scheduleChunkedTask(() => {
-        loadGsap().then(({ gsap }) => {
-          if (cancelled || !sectionRef.current) return;
-          ctx = gsap.context(() => {
+    const cancelTask = scheduleChunkedTask(() => {
+      loadGsap().then(({ gsap }) => {
+        if (cancelled || !sectionRef.current) return;
+        ctx = gsap.context(() => {
           gsap.fromTo(
             [topLineRef.current, bottomLineRef.current],
             { scaleX: 0 },
             {
               scaleX: 1,
-              duration: 0.9,
+              duration: 0.85,
               ease: 'power3.out',
-              scrollTrigger: { trigger: el, start: 'top 84%', once: true },
+              scrollTrigger: { trigger: el, start: 'top 86%', once: true },
             }
           );
 
@@ -47,9 +45,9 @@ export const FounderSection: React.FC = React.memo(() => {
             {
               opacity: 1,
               x: 0,
-              duration: 0.9,
+              duration: 0.85,
               ease: 'power3.out',
-              scrollTrigger: { trigger: el, start: 'top 80%', once: true },
+              scrollTrigger: { trigger: el, start: 'top 82%', once: true },
             }
           );
 
@@ -58,15 +56,31 @@ export const FounderSection: React.FC = React.memo(() => {
             { scale: 1.08 },
             {
               scale: 1,
-              duration: 1.1,
+              duration: 1.05,
               ease: 'power3.out',
-              scrollTrigger: { trigger: el, start: 'top 80%', once: true },
+              scrollTrigger: { trigger: el, start: 'top 82%', once: true },
             }
           );
 
+          const statTiles = el.querySelectorAll('.founder-stat-tile');
+          if (statTiles.length > 0) {
+            gsap.fromTo(
+              statTiles,
+              { y: 14, opacity: 0 },
+              {
+                y: 0,
+                opacity: 1,
+                duration: 0.45,
+                stagger: 0.09,
+                ease: 'power3.out',
+                scrollTrigger: { trigger: el, start: 'top 78%', once: true },
+              }
+            );
+          }
+
           if (neonOverlayRef.current) {
             const flickerTl = gsap.timeline({
-              scrollTrigger: { trigger: el, start: 'top 74%', once: true },
+              scrollTrigger: { trigger: el, start: 'top 76%', once: true },
             });
             flickerTl
               .to(neonOverlayRef.current, { opacity: 0.9, duration: 0.08 })
@@ -83,24 +97,22 @@ export const FounderSection: React.FC = React.memo(() => {
               {
                 x: 0,
                 opacity: 1,
-                duration: 0.85,
+                duration: 0.8,
                 ease: 'power2.out',
-                scrollTrigger: { trigger: scriptRef.current, start: 'top 86%', once: true },
+                scrollTrigger: { trigger: scriptRef.current, start: 'top 88%', once: true },
               }
             );
           }
         }, el);
-        });
       });
     });
 
     return () => {
       cancelled = true;
-      cancelInteract();
       cancelTask?.();
       ctx?.revert();
     };
-  }, [reducedMotion, tier]);
+  }, [reducedMotion]);
 
   return (
     <section
@@ -153,29 +165,52 @@ export const FounderSection: React.FC = React.memo(() => {
           </div>
 
           <div className="lg:col-span-6 py-12 lg:py-16 lg:pl-12 relative">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-8">
-              <div className="max-w-[380px]">
-                <div className="eyebrow-row mb-4">{HOME_COPY.founder.eyebrow}</div>
+            <Reveal>
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-8">
+                <div className="max-w-[420px]">
+                  <div className="eyebrow-row mb-4">{HOME_COPY.founder.eyebrow}</div>
 
-                <h2 className="headline-display text-[42px] sm:text-[50px] text-white">
-                  <SplitReveal text={HOME_COPY.founder.name} mode="chars" />
-                </h2>
+                  <h2 className="headline-display text-[42px] sm:text-[50px] text-white">
+                    <SplitReveal text={HOME_COPY.founder.name} mode="words" />
+                  </h2>
 
-                <div className="mt-1.5 text-[15px] font-medium text-[#C9C9C9]">
-                  {HOME_COPY.founder.title}
+                  <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-[#B6F500]/40 bg-[#B6F500]/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-[#B6F500]">
+                    <Award className="w-3.5 h-3.5" strokeWidth={1.85} />
+                    <span>{HOME_COPY.founder.credentialBadge}</span>
+                  </div>
+
+                  <p className="mt-4 text-[15px] leading-relaxed text-[#C9C9C9]">
+                    {HOME_COPY.founder.mission}
+                  </p>
+
+                  <blockquote className="mt-3 pl-3.5 border-l-2 border-[#B6F500]/65 text-xs italic text-white/80">
+                    &ldquo;{HOME_COPY.founder.quote}&rdquo;
+                  </blockquote>
+
+                  {/* Verifiable Authority & Coaching Standards Strip */}
+                  <div className="mt-5 grid grid-cols-3 gap-2.5">
+                    {HOME_COPY.founder.trustStats.map((stat) => (
+                      <div
+                        key={stat.label}
+                        className="founder-stat-tile rounded-xl border border-white/10 bg-[#0B0B0C]/90 px-3 py-2.5"
+                      >
+                        <div className="font-display italic font-black text-lg leading-none text-[#B6F500]">
+                          {stat.value}
+                        </div>
+                        <div className="mt-1 text-[10px] font-medium uppercase tracking-wider text-[#8C8C8C] leading-tight">
+                          {stat.label}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-7">
+                    <Button variant="outline" to="/about">
+                      {HOME_COPY.founder.cta}
+                      <span className="sr-only"> ABOUT FOUNDER JATINDER SINGH</span>
+                    </Button>
+                  </div>
                 </div>
-
-                <p className="mt-5 text-[15px] leading-relaxed text-[#C9C9C9]">
-                  {HOME_COPY.founder.mission}
-                </p>
-
-                <div className="mt-7">
-                  <Button variant="outline" to="/about">
-                    {HOME_COPY.founder.cta}
-                    <span className="sr-only"> ABOUT FOUNDER JATINDER SINGH</span>
-                  </Button>
-                </div>
-              </div>
 
               <div
                 ref={scriptRef}
@@ -196,7 +231,8 @@ export const FounderSection: React.FC = React.memo(() => {
                   />
                 </svg>
               </div>
-            </div>
+              </div>
+            </Reveal>
           </div>
         </div>
       </div>

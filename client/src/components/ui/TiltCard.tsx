@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { loadGsap } from '../../lib/gsapBridge';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { useTier } from '../../lib/perfTier';
 
 interface TiltCardProps {
   children: React.ReactNode;
@@ -122,8 +121,7 @@ const TiltCardInteractive: React.FC<TiltCardProps> = ({
 export const TiltCard: React.FC<TiltCardProps> = React.memo(
   ({ children, className = '', maxTilt = 6, baseRotate = 0, straightenOnHover = false, glareColor = 'rgba(182, 245, 0, 0.16)' }) => {
     const reducedMotion = useReducedMotion();
-    const tier = useTier();
-    if (reducedMotion || tier !== 'high' || navigator.webdriver) {
+    if (reducedMotion) {
       return (
         <div
           style={baseRotate ? { transform: `rotate(${baseRotate}deg)` } : undefined}

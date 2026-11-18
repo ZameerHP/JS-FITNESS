@@ -35,6 +35,7 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
     const triangleGlowRef = useRef<SVGPolygonElement>(null);
     const triangleWrapRef = useRef<HTMLDivElement>(null);
     const watermarkRef = useRef<HTMLDivElement>(null);
+    const eyebrowRef = useRef<HTMLDivElement>(null);
     const sublineRef = useRef<HTMLParagraphElement>(null);
     const buttonsRef = useRef<HTMLDivElement>(null);
     const rightTaglineRef = useRef<HTMLDivElement>(null);
@@ -44,16 +45,15 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
     const hasWalkthroughVideo = videos.some((v) => v.visible);
 
     useEffect(() => {
-      if (tier !== 'high' || navigator.webdriver) return;
       const check = () => setIsMobile(window.innerWidth < 768);
       window.addEventListener('resize', check, { passive: true });
       return () => window.removeEventListener('resize', check);
-    }, [tier]);
+    }, []);
 
     // Track Hero visibility + tab visibility for pausing WebGL & breathing loop
     useEffect(() => {
       const el = sectionRef.current;
-      if (!el || tier !== 'high' || reducedMotion || navigator.webdriver) return;
+      if (!el || reducedMotion) return;
       let inViewport = true;
 
       const sync = () => {
@@ -74,54 +74,27 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
         io.disconnect();
         document.removeEventListener('visibilitychange', sync);
       };
-    }, [tier, reducedMotion]);
+    }, [reducedMotion]);
 
-    // Mount Three.js particles ONLY on interactive hardware-WebGL desktop high tier after 4.5s if near top
+    // Mount Three.js particles on hardware-WebGL desktop as soon as Preloader clears
     useEffect(() => {
-      if (
-        !ready ||
-        reducedMotion ||
-        tier !== 'high' ||
-        isMobile ||
-        navigator.webdriver ||
-        !hasHardwareWebGL()
-      ) {
+      if (!ready || reducedMotion || isMobile || !hasHardwareWebGL()) {
         setMountParticles(false);
         return;
       }
 
-      let cancelled = false;
-      let idleId: number | undefined;
-      const w = window as Window & {
-        requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
-        cancelIdleCallback?: (id: number) => void;
-      };
-
       const timerId = window.setTimeout(() => {
-        if (window.scrollY >= 10 || cancelled) return;
-        if (w.requestIdleCallback) {
-          idleId = w.requestIdleCallback(
-            () => {
-              if (!cancelled && window.scrollY < 10) setMountParticles(true);
-            },
-            { timeout: 1000 }
-          );
-        } else if (!cancelled && window.scrollY < 10) {
-          setMountParticles(true);
-        }
-      }, 4500);
+        setMountParticles(true);
+      }, 150);
 
       return () => {
-        cancelled = true;
         clearTimeout(timerId);
-        if (idleId !== undefined) w.cancelIdleCallback?.(idleId);
       };
-    }, [ready, reducedMotion, tier, isMobile]);
+    }, [ready, reducedMotion, isMobile]);
 
     // Single global pointer subscription via GSAP quickTo (zero extra RAF, zero React re-renders)
     useEffect(() => {
-      if (reducedMotion || isMobile || tier !== 'high' || navigator.webdriver || !heroVisible)
-        return;
+      if (reducedMotion || isMobile || !heroVisible) return;
 
       let cancelled = false;
       let ctx: gsap.Context | null = null;
@@ -178,15 +151,11 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
       };
     }, [reducedMotion, isMobile, tier, heroVisible]);
 
-    // Entrance & scroll timelines
+    // Entrance & scroll timelines (runs cleanly on every refresh across devices)
     useEffect(() => {
       if (!ready) return;
       const section = sectionRef.current;
-      if (!section) return;
-
-      if (reducedMotion || tier !== 'high') {
-        return;
-      }
+      if (!section || reducedMotion) return;
 
       let cancelled = false;
       let ctx: gsap.Context | null = null;
@@ -194,71 +163,78 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
       loadGsap().then(({ gsap }) => {
         if (cancelled || !sectionRef.current) return;
         ctx = gsap.context(() => {
-        const tl = gsap.timeline();
+          const tl = gsap.timeline();
 
-        tl.fromTo(
-          bgRef.current,
-          { scale: 1.12 },
-          { scale: 1, duration: 1.8, ease: 'power3.out' },
-          0
-        );
-
-        const polyTargets = [triangleGlowRef.current, triangleRef.current].filter(
-          Boolean
-        ) as SVGPolygonElement[];
-        if (polyTargets.length > 0) {
-          const len = polyTargets[0].getTotalLength();
-          const lenPx = `${len.toFixed(1)}px`;
-          polyTargets.forEach((pt) => {
-            pt.style.strokeDasharray = lenPx;
-            pt.style.strokeDashoffset = lenPx;
-            pt.style.opacity = '0.4';
-          });
-          const triState = { p: 1, op: 0.4 };
-          tl.to(
-            triState,
-            {
-              p: 0,
-              op: 1,
-              duration: 1.3,
-              ease: 'power3.out',
-              onUpdate: () => {
-                const off = `${(len * triState.p).toFixed(1)}px`;
-                const op = triState.op.toFixed(2);
-                for (let i = 0; i < polyTargets.length; i += 1) {
-                  polyTargets[i].style.strokeDashoffset = off;
-                  polyTargets[i].style.opacity = op;
-                }
-              },
-            },
-            0.1
-          );
-        }
-
-        // GPU-only athlete entrance keeping opacity: 1 for immediate LCP paint
-        if (athleteImgRef.current && !isMobile) {
           tl.fromTo(
-            athleteImgRef.current,
-            { y: 28, scale: 0.985 },
-            { y: 0, scale: 1, duration: 0.85, ease: 'power3.out' },
-            0.12
+            bgRef.current,
+            { scale: 1.14 },
+            { scale: 1.06, duration: 1.4, ease: 'power3.out' },
+            0
           );
-        }
 
-        if (tier === 'high') {
+          if (eyebrowRef.current) {
+            tl.fromTo(
+              eyebrowRef.current,
+              { x: -18, opacity: 0 },
+              { x: 0, opacity: 1, duration: 0.5, ease: 'power3.out' },
+              0.05
+            );
+          }
+
+          const polyTargets = [triangleGlowRef.current, triangleRef.current].filter(
+            Boolean
+          ) as SVGPolygonElement[];
+          if (polyTargets.length > 0) {
+            const len = polyTargets[0].getTotalLength();
+            const lenPx = `${len.toFixed(1)}px`;
+            polyTargets.forEach((pt) => {
+              pt.style.strokeDasharray = lenPx;
+              pt.style.strokeDashoffset = lenPx;
+              pt.style.opacity = '0.4';
+            });
+            const triState = { p: 1, op: 0.4 };
+            tl.to(
+              triState,
+              {
+                p: 0,
+                op: 1,
+                duration: 1.2,
+                ease: 'power3.out',
+                onUpdate: () => {
+                  const off = `${(len * triState.p).toFixed(1)}px`;
+                  const op = triState.op.toFixed(2);
+                  for (let i = 0; i < polyTargets.length; i += 1) {
+                    polyTargets[i].style.strokeDashoffset = off;
+                    polyTargets[i].style.opacity = op;
+                  }
+                },
+              },
+              0.08
+            );
+          }
+
+          if (athleteImgRef.current && !isMobile) {
+            tl.fromTo(
+              athleteImgRef.current,
+              { y: 28, scale: 0.98 },
+              { y: 0, scale: 1, duration: 0.8, ease: 'power3.out' },
+              0.1
+            );
+          }
+
           tl.fromTo(
             sublineRef.current,
-            { opacity: 0, y: 10 },
-            { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' },
-            0.55
+            { opacity: 0, y: 12 },
+            { opacity: 1, y: 0, duration: 0.65, ease: 'power3.out' },
+            0.38
           );
 
           if (buttonsRef.current) {
             tl.fromTo(
               buttonsRef.current.children,
-              { scale: 0.92, opacity: 0, y: 14 },
-              { scale: 1, opacity: 1, y: 0, duration: 0.55, stagger: 0.1, ease: 'back.out(1.3)' },
-              0.65
+              { scale: 0.9, opacity: 0, y: 14 },
+              { scale: 1, opacity: 1, y: 0, duration: 0.5, stagger: 0.1, ease: 'back.out(1.4)' },
+              0.48
             );
           }
 
@@ -266,21 +242,37 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
             tl.fromTo(
               rightTaglineRef.current.querySelectorAll('.tagline-line'),
               { y: 18, opacity: 0 },
-              { y: 0, opacity: 1, duration: 0.45, stagger: 0.08, ease: 'power3.out' },
-              0.6
+              { y: 0, opacity: 1, duration: 0.42, stagger: 0.08, ease: 'power3.out' },
+              0.45
             );
           }
           if (rightUnderlineRef.current) {
             tl.fromTo(
               rightUnderlineRef.current,
               { scaleX: 0 },
-              { scaleX: 1, duration: 0.5, ease: 'power3.out' },
-              0.9
+              { scaleX: 1, duration: 0.48, ease: 'power3.out' },
+              0.72
             );
           }
-        }
 
-        if (tier === 'high') {
+          if (bgRef.current) {
+            gsap.fromTo(
+              bgRef.current,
+              { yPercent: 0, scale: 1.06 },
+              {
+                yPercent: 14,
+                scale: 1.12,
+                ease: 'none',
+                scrollTrigger: {
+                  trigger: section,
+                  start: 'top top',
+                  end: 'bottom top',
+                  scrub: true,
+                },
+              }
+            );
+          }
+
           gsap.to(watermarkRef.current, {
             y: -50,
             ease: 'none',
@@ -302,7 +294,6 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
               scrub: true,
             },
           });
-        }
         }, section);
       });
 
@@ -310,14 +301,14 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
         cancelled = true;
         ctx?.revert();
       };
-    }, [ready, reducedMotion, isMobile, tier]);
+    }, [ready, reducedMotion, isMobile]);
 
     const particleCount = tier === 'high' ? (isMobile ? 60 : 150) : 60;
 
     return (
       <section
         ref={sectionRef}
-        className="relative min-h-[100svh] lg:min-h-[820px] flex items-center overflow-hidden bg-[#050505] pt-[72px] pb-24 isolate"
+        className="relative min-h-[100svh] lg:min-h-[820px] flex items-center overflow-hidden bg-[#050505] pt-[76px] pb-24 isolate"
       >
         {/* Layer 1: Dark gym background with green haze */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -341,7 +332,7 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
           />
         </div>
 
-        {/* Layer 2: Lazy-loaded GPU Shader Three.js particles (only mounted when high + hw WebGL + idle) */}
+        {/* Layer 2: Lazy-loaded GPU Shader Three.js particles (hardware WebGL desktop) */}
         {mountParticles && tier === 'high' && !isMobile && !reducedMotion && (
           <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[1]">
             <Suspense fallback={null}>
@@ -377,7 +368,7 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
         >
           <svg
             viewBox="0 0 600 640"
-            className="w-[82%] max-w-[560px] h-auto overflow-visible opacity-90"
+            className="w-[82%] max-w-[560px] h-auto overflow-visible opacity-90 triangle-breathe"
           >
             <polygon
               ref={triangleGlowRef}
@@ -422,7 +413,7 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
             fetchPriority="high"
             alt="Muscular athlete representing JS FITNESS INC discipline"
             className={`relative z-10 h-[78%] sm:h-[90%] lg:h-[96%] w-auto max-w-none object-contain object-bottom opacity-100 ${
-              heroVisible && tier === 'high' && !isMobile ? 'athlete-breathe' : ''
+              heroVisible && !reducedMotion ? 'athlete-breathe' : ''
             }`}
           />
         </div>
@@ -441,7 +432,13 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
         <div className="relative z-10 mx-auto w-full max-w-[1280px] px-5 lg:px-8 pt-6 pb-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 items-end gap-8">
             <div className="lg:col-span-7">
-              <div className="eyebrow-row mb-5">{HOME_COPY.hero.eyebrow}</div>
+              <div ref={eyebrowRef} className="mb-5 flex flex-wrap items-center gap-3">
+                <div className="eyebrow-row">{HOME_COPY.hero.eyebrow}</div>
+                <span className="badge-shimmer relative overflow-hidden inline-flex items-center gap-2 rounded-full border border-[#B6F500]/45 bg-[#B6F500]/10 px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#B6F500]">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#B6F500] status-ping" />
+                  {HOME_COPY.hero.availabilityBadge}
+                </span>
+              </div>
 
               <h1 className="headline-display text-[clamp(3.3rem,7.2vw,6.5rem)] leading-[0.92]">
                 <SplitReveal

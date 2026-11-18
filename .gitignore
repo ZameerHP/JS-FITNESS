@@ -2,8 +2,11 @@ node_modules/
 dist/
 server/prisma/dev.db
 server/prisma/dev.db-journal
+server/prisma/backups/
 server/uploads/
 server/.env
 .env
+.env.local
+.env.*.local
 artifacts/
 *.log

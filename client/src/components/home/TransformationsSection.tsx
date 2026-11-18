@@ -6,6 +6,7 @@ import { TransformationItem } from '../../lib/api';
 import { Button } from '../ui/Button';
 import { SplitReveal } from '../ui/SplitReveal';
 import { ImageSlot } from '../ui/ImageSlot';
+import { Reveal } from '../ui/Reveal';
 
 const TransformationPairCard: React.FC<{ item: TransformationItem }> = React.memo(({ item }) => {
   const [compareMode, setCompareMode] = useState(false);
@@ -138,8 +139,16 @@ export const TransformationsSection: React.FC = React.memo(() => {
 
   return (
     <section className="cv-section relative overflow-hidden bg-[#050505] py-24 lg:py-28">
-      <div className="mx-auto max-w-[1280px] px-5 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 items-center gap-10">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-20 right-1/4 h-[440px] w-[440px] rounded-full"
+        style={{
+          background: 'radial-gradient(circle, rgba(182, 245, 0, 0.06) 0%, transparent 70%)',
+        }}
+      />
+      <div className="relative z-10 mx-auto max-w-[1280px] px-5 lg:px-8">
+        <Reveal>
+          <div className="grid grid-cols-1 lg:grid-cols-12 items-center gap-10">
           <div className="lg:col-span-5">
             <div className="eyebrow-row mb-5">{HOME_COPY.transformations.eyebrow}</div>
 
@@ -177,7 +186,7 @@ export const TransformationsSection: React.FC = React.memo(() => {
             onMouseLeave={() => setPaused(false)}
             data-cursor="drag"
           >
-            <div className="relative rounded-[24px] glass-panel border-white/10 p-4 sm:p-6 shadow-[0_24px_60px_rgba(0,0,0,0.8)]">
+            <div className="relative card-unified card-hover-lift p-4 sm:p-6 shadow-[0_24px_60px_rgba(0,0,0,0.8)]">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {currentPairs.map((pair) => (
                   <TransformationPairCard key={pair.id} item={pair} />
@@ -226,6 +235,7 @@ export const TransformationsSection: React.FC = React.memo(() => {
             </div>
           </div>
         </div>
+        </Reveal>
       </div>
     </section>
   );

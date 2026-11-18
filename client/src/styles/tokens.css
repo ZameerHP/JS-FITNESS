@@ -145,7 +145,7 @@
   font-style: italic;
   font-weight: 900;
   text-transform: uppercase;
-  line-height: 0.92;
+  line-height: 0.98;
   letter-spacing: -0.01em;
 }
 
@@ -156,21 +156,7 @@
   -webkit-text-fill-color: transparent;
 }
 
-.text-metallic .split-token {
-  background: linear-gradient(180deg, #ffffff 0%, #d9d9d9 55%, #8d8d8d 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
 .text-cream-metallic {
-  background: linear-gradient(180deg, #ffffff 0%, #f3eedc 55%, #b9b2a1 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.text-cream-metallic .split-token {
   background: linear-gradient(180deg, #ffffff 0%, #f3eedc 55%, #b9b2a1 100%);
   -webkit-background-clip: text;
   background-clip: text;
@@ -202,32 +188,74 @@
   background: linear-gradient(90deg, rgba(182, 245, 0, 0.8), rgba(182, 245, 0, 0.1));
 }
 
-/* Glass surfaces: gradient + border by default, backdrop-filter strictly capped to max 3 .glass-blur surfaces on high tier */
+/* Unified Card Component Family (consistent radius, surface, border & hover lift + glow) */
+.card-unified,
 .glass-panel {
   background: linear-gradient(180deg, rgba(20, 22, 24, 0.9) 0%, rgba(11, 12, 13, 0.95) 100%);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.55);
+  transition:
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 280ms ease,
+    box-shadow 280ms ease;
 }
 
+.card-unified-lime,
 .glass-panel-lime {
   background: linear-gradient(180deg, rgba(16, 18, 15, 0.92) 0%, rgba(10, 11, 12, 0.96) 100%);
   border: 1px solid rgba(182, 245, 0, 0.35);
+  border-radius: 24px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.65), 0 0 26px rgba(182, 245, 0, 0.1);
+  transition:
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 280ms ease,
+    box-shadow 280ms ease;
 }
 
-.navbar-scrolled {
-  background-color: rgba(5, 5, 5, 0.82);
-  border-bottom-color: rgba(182, 245, 0, 0.22);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+@media (hover: hover) {
+  .card-hover-lift:hover {
+    transform: translate3d(0, -4px, 0) scale(1.018);
+    border-color: rgba(182, 245, 0, 0.55);
+    box-shadow: 0 24px 52px rgba(0, 0, 0, 0.72), 0 0 28px rgba(182, 245, 0, 0.18);
+  }
 }
 
-html[data-perf='high'] .navbar-scrolled,
+.section-divider-glow {
+  height: 1px;
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.06) 18%,
+    rgba(182, 245, 0, 0.28) 50%,
+    rgba(255, 255, 255, 0.06) 82%,
+    transparent 100%
+  );
+}
+
+header.site-header {
+  height: 76px;
+}
+
+header.navbar-scrolled {
+  height: 64px;
+  background-color: rgba(5, 5, 5, 0.92);
+  border-bottom-color: rgba(182, 245, 0, 0.28);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.6);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+html[data-perf='high'] header.navbar-scrolled,
 html[data-perf='high'] .glass-blur {
-  background: rgba(14, 15, 16, 0.65);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  background: rgba(8, 9, 9, 0.8);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
 }
 
 @media (pointer: coarse) {
-  .navbar-scrolled,
+  header.navbar-scrolled,
   .glass-blur {
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
@@ -364,8 +392,91 @@ html[data-perf='low'] .film-grain {
 }
 
 .pulse-ring-anim,
-.status-ping {
-  animation: pulse-ring 3.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+.status-ping,
+.whatsapp-pulse-ring {
+  animation: pulse-ring 3.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes whatsapp-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 20px rgba(182, 245, 0, 0.28);
+  }
+  50% {
+    transform: scale(1.045);
+    box-shadow: 0 0 32px rgba(182, 245, 0, 0.5);
+  }
+}
+
+.whatsapp-breathe {
+  animation: whatsapp-breathe 2.8s ease-in-out infinite;
+}
+
+@keyframes badge-shimmer {
+  0% {
+    transform: translate3d(-130%, 0, 0) skewX(-18deg);
+  }
+  45%,
+  100% {
+    transform: translate3d(260%, 0, 0) skewX(-18deg);
+  }
+}
+
+.badge-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  animation: badge-shimmer 4.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  pointer-events: none;
+}
+
+@keyframes pillar-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.pillar-enter {
+  animation: pillar-in 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes triangle-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.92;
+  }
+  50% {
+    transform: scale(1.018);
+    opacity: 1;
+  }
+}
+
+.triangle-breathe {
+  animation: triangle-breathe 5.4s ease-in-out infinite;
+}
+
+@keyframes radar-pulse {
+  0% {
+    transform: scale(0.82);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.55);
+    opacity: 0;
+  }
+}
+
+.radar-pulse {
+  animation: radar-pulse 2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
 }
 
 .lime-sweep-text {
@@ -373,25 +484,18 @@ html[data-perf='low'] .film-grain {
   -webkit-text-fill-color: #b6f500;
 }
 
-html[data-perf='medium'] .athlete-breathe,
-html[data-perf='medium'] .scroll-dot-anim,
-html[data-perf='medium'] .pulse-ring-anim,
-html[data-perf='medium'] .status-ping,
-html[data-perf='medium'] .marquee-track-anim,
-html[data-perf='low'] .athlete-breathe,
-html[data-perf='low'] .scroll-dot-anim,
-html[data-perf='low'] .pulse-ring-anim,
-html[data-perf='low'] .status-ping,
-html[data-perf='low'] .marquee-track-anim {
-  animation: none !important;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .athlete-breathe,
   .scroll-dot-anim,
   .pulse-ring-anim,
   .status-ping,
-  .marquee-track-anim {
+  .marquee-track-anim,
+  .whatsapp-pulse-ring,
+  .whatsapp-breathe,
+  .badge-shimmer::after,
+  .pillar-enter,
+  .triangle-breathe,
+  .radar-pulse {
     animation: none !important;
   }
 }

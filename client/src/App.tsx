@@ -3,21 +3,17 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { ContentProvider, useSiteContent } from './context/ContentContext';
 import { useLenis } from './hooks/useLenis';
-import { hasHardwareWebGL, startPerfWatchdog, useTier } from './lib/perfTier';
+import { startPerfWatchdog, useTier } from './lib/perfTier';
 import { ScrollProgress } from './components/layout/ScrollProgress';
 import { Navbar } from './components/layout/Navbar';
+import { PageTransition } from './components/layout/PageTransition';
+import { Preloader } from './components/layout/Preloader';
 import { Marquee } from './components/layout/Marquee';
 import { Footer } from './components/layout/Footer';
 import { WhatsAppFloat } from './components/ui/WhatsAppFloat';
 import { AnnouncementBar } from './components/ui/AnnouncementBar';
 import { Home } from './pages/Home';
 
-const Preloader = lazy(() =>
-  import('./components/layout/Preloader').then((m) => ({ default: m.Preloader }))
-);
-const PageTransition = lazy(() =>
-  import('./components/layout/PageTransition').then((m) => ({ default: m.PageTransition }))
-);
 const CustomCursor = lazy(() =>
   import('./components/ui/CustomCursor').then((m) => ({ default: m.CustomCursor }))
 );
@@ -69,10 +65,7 @@ const PublicShell: React.FC = () => {
     typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('perf') === '1';
   const [preloaderDone, setPreloaderDone] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
-    if (sessionStorage.getItem('js_preloader_seen')) return true;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return true;
-    const t = document.documentElement.dataset.perf || 'high';
-    return t !== 'high' || !hasHardwareWebGL();
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   });
 
   useLenis();
@@ -95,18 +88,12 @@ const PublicShell: React.FC = () => {
     <div className="relative min-h-screen bg-[#050505] text-white">
         <div aria-hidden="true" className="film-grain pointer-events-none fixed inset-0 z-[9970]" />
 
-        {!preloaderDone && (
-          <Suspense fallback={null}>
-            <Preloader onComplete={handlePreloaderComplete} />
-          </Suspense>
-        )}
+        {!preloaderDone && <Preloader onComplete={handlePreloaderComplete} />}
         <ScrollProgress />
-        {isHighTier && (
-          <Suspense fallback={null}>
-            <PageTransition />
-            <CustomCursor />
-          </Suspense>
-        )}
+        <PageTransition />
+        <Suspense fallback={null}>
+          <CustomCursor />
+        </Suspense>
 
         <AnnouncementBar />
         <Navbar onPrefetchRoute={prefetchRoute} />

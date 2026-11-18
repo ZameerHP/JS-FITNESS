@@ -3,24 +3,42 @@ import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
+import { isSupabaseAuthConfigured, syncAdminUserToSupabaseAuth } from '../src/services/supabase.js';
 
 const rootEnv = path.resolve(process.cwd(), '../.env');
+const rootLocalEnv = path.resolve(process.cwd(), '../.env.local');
+const localEnv = path.resolve(process.cwd(), '.env');
+
+if (fs.existsSync(localEnv)) dotenv.config({ path: localEnv });
+if (fs.existsSync(rootLocalEnv)) dotenv.config({ path: rootLocalEnv });
 if (fs.existsSync(rootEnv)) dotenv.config({ path: rootEnv });
-else dotenv.config();
+else if (!fs.existsSync(localEnv)) dotenv.config();
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const adminEmail = (process.env.ADMIN_EMAIL || 'admin@jsfitness.ca').toLowerCase();
+  const adminEmail = (process.env.ADMIN_EMAIL || 'admin@jsfitness.ca').trim().toLowerCase();
   const adminPassword = process.env.ADMIN_PASSWORD || 'JSFitness2026!';
   const passwordHash = await bcrypt.hash(adminPassword, 12);
 
+  let supabaseUserId: string | undefined;
+  if (isSupabaseAuthConfigured()) {
+    supabaseUserId = await syncAdminUserToSupabaseAuth({
+      email: adminEmail,
+      password: adminPassword,
+    });
+  }
+
   await prisma.adminUser.upsert({
     where: { email: adminEmail },
-    update: { passwordHash },
+    update: {
+      passwordHash,
+      ...(supabaseUserId ? { supabaseUserId } : {}),
+    },
     create: {
       email: adminEmail,
       passwordHash,
+      supabaseUserId: supabaseUserId || null,
       totpEnabled: false,
     },
   });
@@ -92,6 +110,10 @@ async function main() {
         'JS FITNESS INC — More than just a gym membership. 24/7 gym access, customized coaching, nutrition tracking, and real transformations in Calgary NE.',
       keywords: 'gym Calgary NE, 24/7 gym Calgary, personal trainer Calgary',
     },
+    legal: {
+      privacyPolicyUpdated: 'November 2026',
+      termsUpdated: 'November 2026',
+    },
   };
 
   for (const [key, value] of Object.entries(defaultSettings)) {
@@ -110,7 +132,8 @@ async function main() {
           name: 'Demo Client — Arjun S.',
           timeframe: '16 Weeks',
           category: 'Fat Loss & Muscle',
-          story: 'Demo placeholder transformation showing structured nutrition, custom workouts, and weekly check-ins. Replace with real client photos in /admin.',
+          story:
+            'Demo placeholder transformation showing structured nutrition, custom workouts, and weekly check-ins. Replace with real client photos in /admin.',
           beforeImage: '/images/transform-male-before.webp',
           afterImage: '/images/transform-male-after.webp',
           isDemo: true,
@@ -121,7 +144,8 @@ async function main() {
           name: 'Demo Client — Priya K.',
           timeframe: '16 Weeks',
           category: 'Body Recomposition',
-          story: 'Demo placeholder transformation showing consistent strength training and lifestyle tracking. Replace with real client photos in /admin.',
+          story:
+            'Demo placeholder transformation showing consistent strength training and lifestyle tracking. Replace with real client photos in /admin.',
           beforeImage: '/images/transform-female-before.webp',
           afterImage: '/images/transform-female-after.webp',
           isDemo: true,
@@ -132,7 +156,7 @@ async function main() {
     });
   }
 
-  console.log('Seed completed successfully.');
+  console.log('Supabase seed completed successfully.');
 }
 
 main()

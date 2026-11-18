@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { prisma, invalidateContentCache, DEFAULT_SETTINGS } from './contentController.js';
+import { prisma } from '../lib/prisma.js';
+import { invalidateContentCache, DEFAULT_SETTINGS } from './contentController.js';
 import { processAndSaveImage } from '../services/uploads.js';
 
 export async function getAdminOverview(_req: Request, res: Response): Promise<void> {
@@ -175,7 +176,7 @@ export async function reorderGallery(req: Request, res: Response): Promise<void>
     return;
   }
 
-  await Promise.all(
+  await prisma.$transaction(
     parsed.data.ids.map((id, idx) =>
       prisma.galleryItem.update({ where: { id }, data: { order: idx } })
     )

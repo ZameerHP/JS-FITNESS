@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { loadGsap } from '../../lib/gsapBridge';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { useTier } from '../../lib/perfTier';
 
 interface CountUpProps {
   end: number;
@@ -13,37 +12,38 @@ interface CountUpProps {
 }
 
 export const CountUp: React.FC<CountUpProps> = React.memo(
-  ({ end, decimals = 0, prefix = '', suffix = '', duration = 1400, className = '' }) => {
+  ({ end, decimals = 0, prefix = '', suffix = '', duration = 700, className = '' }) => {
     const ref = useRef<HTMLSpanElement>(null);
+    const hasAnimatedRef = useRef(false);
     const reducedMotion = useReducedMotion();
-    const tier = useTier();
-    const initialText = `${prefix}${end.toFixed(decimals)}${suffix}`;
+    const formattedEnd = `${prefix}${end.toFixed(decimals)}${suffix}`;
 
     useEffect(() => {
       const el = ref.current;
       if (!el) return;
 
-      if (reducedMotion || tier !== 'high' || navigator.webdriver) {
-        el.textContent = `${prefix}${end.toFixed(decimals)}${suffix}`;
+      if (hasAnimatedRef.current || reducedMotion) {
+        el.textContent = formattedEnd;
+        hasAnimatedRef.current = true;
         return;
       }
 
       let tween: gsap.core.Tween | null = null;
-      let started = false;
       let cancelled = false;
 
       const observer = new IntersectionObserver(
         (entries) => {
-          if (entries[0]?.isIntersecting && !started) {
-            started = true;
+          if (entries[0]?.isIntersecting && !hasAnimatedRef.current) {
+            hasAnimatedRef.current = true;
             observer.disconnect();
             loadGsap().then(({ gsap }) => {
               if (cancelled || !ref.current) return;
-              const state = { val: 0 };
+              const startVal = Number((end * 0.35).toFixed(decimals));
+              const state = { val: startVal };
               let lastText = '';
               tween = gsap.to(state, {
                 val: end,
-                duration: duration / 1000,
+                duration: Math.min(duration, 700) / 1000,
                 ease: 'power3.out',
                 onUpdate: () => {
                   const next = `${prefix}${state.val.toFixed(decimals)}${suffix}`;
@@ -51,6 +51,9 @@ export const CountUp: React.FC<CountUpProps> = React.memo(
                     lastText = next;
                     el.textContent = next;
                   }
+                },
+                onComplete: () => {
+                  el.textContent = formattedEnd;
                 },
               });
             });
@@ -64,12 +67,15 @@ export const CountUp: React.FC<CountUpProps> = React.memo(
         cancelled = true;
         observer.disconnect();
         tween?.kill();
+        if (hasAnimatedRef.current && ref.current) {
+          ref.current.textContent = formattedEnd;
+        }
       };
-    }, [end, decimals, prefix, suffix, duration, reducedMotion, tier]);
+    }, [end, decimals, prefix, suffix, duration, reducedMotion, formattedEnd]);
 
     return (
       <span ref={ref} className={className}>
-        {initialText}
+        {formattedEnd}
       </span>
     );
   }

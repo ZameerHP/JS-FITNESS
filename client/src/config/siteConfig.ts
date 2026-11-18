@@ -150,6 +150,7 @@ export const siteConfig: SiteConfigData = {
 export const HOME_COPY = {
   hero: {
     eyebrow: 'JS FITNESS INC',
+    availabilityBadge: 'ALWAYS OPEN • 24/7 ACCESS',
     headlineLine1: 'TRAIN. EAT.',
     headlineLine2Prefix: 'SLEEP.',
     headlineLine2Accent: 'REPEAT.',
@@ -203,7 +204,14 @@ export const HOME_COPY = {
   founder: {
     eyebrow: 'MEET THE FOUNDER',
     name: 'JATINDER SINGH',
-    title: 'Certified Personal Trainer',
+    title: 'Certified Personal Trainer • Calgary NE',
+    credentialBadge: 'CERTIFIED PERSONAL TRAINER',
+    quote: 'Discipline builds what motivation starts.',
+    trustStats: [
+      { value: '24/7', label: 'Facility Access' },
+      { value: 'MAX 4', label: 'Semi-Private Cap' },
+      { value: '100%', label: 'Custom Programming' },
+    ],
     mission:
       'My mission is to help you become the strongest, healthiest version of yourself.',
     cta: 'LEARN MORE',
@@ -272,20 +280,42 @@ export const MEMBERSHIP_BENEFITS = [
     description:
       'Train on hand-picked commercial machines, heavy free weights, squat racks, and conditioning gear.',
   },
+  {
+    title: 'Focused, No-Ego Training Culture',
+    description:
+      'Enjoy a clean, well-maintained Calgary NE training floor built for serious consistency without overcrowded peak chaos.',
+  },
 ];
 
-export const EQUIPMENT_LIST = [
-  { name: 'Smith Machines', category: 'Strength' },
-  { name: 'Squat Racks', category: 'Power' },
-  { name: 'Dumbbells', category: 'Free Weights' },
-  { name: 'Cable Stations', category: 'Hypertrophy' },
-  { name: 'Chest Press', category: 'Upper Body' },
-  { name: 'Lat Pulldowns', category: 'Back' },
-  { name: 'Rows', category: 'Back' },
-  { name: 'Leg Press', category: 'Lower Body' },
-  { name: 'Glute Equipment', category: 'Lower Body' },
-  { name: 'Treadmills', category: 'Cardio' },
-  { name: 'StairMasters', category: 'Conditioning' },
+export type EquipmentIconKey =
+  | 'smith'
+  | 'squat'
+  | 'dumbbells'
+  | 'cables'
+  | 'chest'
+  | 'lat'
+  | 'rows'
+  | 'legpress'
+  | 'glutes'
+  | 'treadmill'
+  | 'stairmaster';
+
+export const EQUIPMENT_LIST: Array<{
+  name: string;
+  category: string;
+  icon: EquipmentIconKey;
+}> = [
+  { name: 'Smith Machines', category: 'Strength', icon: 'smith' },
+  { name: 'Squat Racks', category: 'Power', icon: 'squat' },
+  { name: 'Dumbbells', category: 'Free Weights', icon: 'dumbbells' },
+  { name: 'Cable Stations', category: 'Hypertrophy', icon: 'cables' },
+  { name: 'Chest Press', category: 'Upper Body', icon: 'chest' },
+  { name: 'Lat Pulldowns', category: 'Back', icon: 'lat' },
+  { name: 'Rows', category: 'Back', icon: 'rows' },
+  { name: 'Leg Press', category: 'Lower Body', icon: 'legpress' },
+  { name: 'Glute Equipment', category: 'Lower Body', icon: 'glutes' },
+  { name: 'Treadmills', category: 'Cardio', icon: 'treadmill' },
+  { name: 'StairMasters', category: 'Conditioning', icon: 'stairmaster' },
 ];
 
 export const MEMBERSHIP_FAQS = [

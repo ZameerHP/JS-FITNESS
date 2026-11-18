@@ -1,5 +1,6 @@
-import { Router } from 'express';
+import { Router, RequestHandler } from 'express';
 import { requireAuth } from '../middleware/auth.js';
+import { asyncHandler } from '../middleware/asyncHandler.js';
 import { uploadMiddleware } from '../services/uploads.js';
 import {
   getAdminOverview,
@@ -22,29 +23,29 @@ import {
 
 const router = Router();
 
-router.use(requireAuth);
+router.use(requireAuth as unknown as RequestHandler);
 
-router.get('/overview', getAdminOverview);
-router.put('/settings', updateSetting);
-router.post('/upload', uploadMiddleware.single('image'), handleImageUpload);
+router.get('/overview', asyncHandler(getAdminOverview));
+router.put('/settings', asyncHandler(updateSetting));
+router.post('/upload', uploadMiddleware.single('image'), asyncHandler(handleImageUpload));
 
-router.post('/transformations', upsertTransformation);
-router.delete('/transformations/:id', deleteTransformation);
+router.post('/transformations', asyncHandler(upsertTransformation));
+router.delete('/transformations/:id', asyncHandler(deleteTransformation));
 
-router.post('/testimonials', upsertTestimonial);
-router.delete('/testimonials/:id', deleteTestimonial);
+router.post('/testimonials', asyncHandler(upsertTestimonial));
+router.delete('/testimonials/:id', asyncHandler(deleteTestimonial));
 
-router.post('/gallery', upsertGalleryItem);
-router.put('/gallery/reorder', reorderGallery);
-router.delete('/gallery/:id', deleteGalleryItem);
+router.post('/gallery', asyncHandler(upsertGalleryItem));
+router.put('/gallery/reorder', asyncHandler(reorderGallery));
+router.delete('/gallery/:id', asyncHandler(deleteGalleryItem));
 
-router.post('/videos', upsertVideoItem);
-router.delete('/videos/:id', deleteVideoItem);
+router.post('/videos', asyncHandler(upsertVideoItem));
+router.delete('/videos/:id', asyncHandler(deleteVideoItem));
 
-router.post('/certifications', upsertCertification);
-router.delete('/certifications/:id', deleteCertification);
+router.post('/certifications', asyncHandler(upsertCertification));
+router.delete('/certifications/:id', asyncHandler(deleteCertification));
 
-router.patch('/contacts/:id', markContactRead);
-router.delete('/contacts/:id', deleteContact);
+router.patch('/contacts/:id', asyncHandler(markContactRead));
+router.delete('/contacts/:id', asyncHandler(deleteContact));
 
 export default router;

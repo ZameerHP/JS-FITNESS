@@ -2,8 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { loadGsap } from '../../lib/gsapBridge';
 import { HOME_COPY } from '../../config/siteConfig';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { useTier } from '../../lib/perfTier';
-import { onFirstUserInteraction, scheduleChunkedTask } from '../../lib/scheduler';
+import { scheduleChunkedTask } from '../../lib/scheduler';
 import { Button } from '../ui/Button';
 import { SplitReveal } from '../ui/SplitReveal';
 import { JSLogo } from '../ui/JSLogo';
@@ -14,7 +13,6 @@ const BASE_BARS = [
 
 export const SystemSection: React.FC = React.memo(() => {
   const reducedMotion = useReducedMotion();
-  const tier = useTier();
   const sectionRef = useRef<HTMLElement>(null);
   const phoneRef = useRef<HTMLDivElement>(null);
   const athleteRef = useRef<HTMLImageElement>(null);
@@ -25,6 +23,7 @@ export const SystemSection: React.FC = React.memo(() => {
   const rectRef = useRef<DOMRect | null>(null);
   const rxToRef = useRef<gsap.QuickToFunc | null>(null);
   const ryToRef = useRef<gsap.QuickToFunc | null>(null);
+  const hasCountedRef = useRef(false);
 
   useEffect(() => {
     const el = sectionRef.current;
@@ -34,7 +33,7 @@ export const SystemSection: React.FC = React.memo(() => {
     const radius = 56;
     const circumference = 2 * Math.PI * radius;
 
-    if (reducedMotion || tier !== 'high' || navigator.webdriver) {
+    if (reducedMotion) {
       if (pctRef.current) pctRef.current.textContent = '92%';
       if (circle) {
         circle.style.strokeDasharray = `${circumference.toFixed(1)}px`;
@@ -49,7 +48,6 @@ export const SystemSection: React.FC = React.memo(() => {
     let jitterInterval: ReturnType<typeof setInterval> | null = null;
     let inView = false;
     let ctx: gsap.Context | null = null;
-    let cancelTask: (() => void) | null = null;
 
     const bars = Array.from(el.querySelectorAll<HTMLElement>('.mockup-bar'));
     const syncLoops = () => {
@@ -61,10 +59,10 @@ export const SystemSection: React.FC = React.memo(() => {
           jitterInterval = setInterval(() => {
             bars.forEach((bar, i) => {
               const base = BASE_BARS[i] || 50;
-              const nextScale = Math.max(0.25, Math.min(1.05, (base + (Math.random() - 0.5) * 14) / base));
+              const nextScale = Math.max(0.28, Math.min(1.06, (base + (Math.random() - 0.5) * 16) / base));
               bar.style.transform = `scaleY(${nextScale.toFixed(2)})`;
             });
-          }, 3000);
+          }, 1800);
         }
       } else {
         floatTween?.pause();
@@ -76,11 +74,10 @@ export const SystemSection: React.FC = React.memo(() => {
       }
     };
 
-    const cancelInteract = onFirstUserInteraction(() => {
-      cancelTask = scheduleChunkedTask(() => {
-        loadGsap().then(({ gsap }) => {
-          if (cancelled || !sectionRef.current) return;
-          ctx = gsap.context(() => {
+    const cancelTask = scheduleChunkedTask(() => {
+      loadGsap().then(({ gsap }) => {
+        if (cancelled || !sectionRef.current) return;
+        ctx = gsap.context(() => {
           if (phoneRef.current) {
             gsap.set(phoneRef.current, { transformPerspective: 1100, rotateY: -6 });
             rxToRef.current = gsap.quickTo(phoneRef.current, 'rotateX', {
@@ -95,7 +92,7 @@ export const SystemSection: React.FC = React.memo(() => {
 
           floatTween = gsap.to(phoneRef.current, {
             y: -10,
-            duration: 2.5,
+            duration: 2.4,
             repeat: -1,
             yoyo: true,
             ease: 'sine.inOut',
@@ -108,7 +105,7 @@ export const SystemSection: React.FC = React.memo(() => {
             const cometObj = { offset: 840 };
             cometTween = gsap.to(cometObj, {
               offset: 0,
-              duration: 4.5,
+              duration: 4.2,
               repeat: -1,
               ease: 'none',
               paused: true,
@@ -135,7 +132,7 @@ export const SystemSection: React.FC = React.memo(() => {
             );
           }
 
-          if (circle) {
+          if (circle && !hasCountedRef.current) {
             circle.style.strokeDasharray = `${circumference.toFixed(1)}px`;
             circle.style.strokeDashoffset = `${circumference.toFixed(1)}px`;
 
@@ -143,12 +140,15 @@ export const SystemSection: React.FC = React.memo(() => {
             let lastPct = -1;
             gsap.to(obj, {
               val: 92,
-              duration: 1.4,
+              duration: 1.2,
               ease: 'power3.out',
               scrollTrigger: {
                 trigger: el,
-                start: 'top 74%',
+                start: 'top 78%',
                 once: true,
+                onEnter: () => {
+                  hasCountedRef.current = true;
+                },
               },
               onUpdate: () => {
                 const v = Math.round(obj.val);
@@ -165,12 +165,12 @@ export const SystemSection: React.FC = React.memo(() => {
             const items = checklistRef.current.querySelectorAll('.check-item');
             gsap.fromTo(
               items,
-              { x: -16, opacity: 0 },
+              { x: -18, opacity: 0 },
               {
                 x: 0,
                 opacity: 1,
                 duration: 0.45,
-                stagger: 0.07,
+                stagger: 0.08,
                 ease: 'power3.out',
                 scrollTrigger: {
                   trigger: checklistRef.current,
@@ -199,7 +199,6 @@ export const SystemSection: React.FC = React.memo(() => {
           );
         }, el);
         syncLoops();
-        });
       });
     });
 
@@ -215,7 +214,6 @@ export const SystemSection: React.FC = React.memo(() => {
 
     return () => {
       cancelled = true;
-      cancelInteract();
       cancelTask?.();
       io.disconnect();
       document.removeEventListener('visibilitychange', syncLoops);
@@ -224,15 +222,15 @@ export const SystemSection: React.FC = React.memo(() => {
       ryToRef.current = null;
       ctx?.revert();
     };
-  }, [reducedMotion, tier]);
+  }, [reducedMotion]);
 
   const handleEnter = () => {
-    if (!sectionRef.current || reducedMotion || tier !== 'high') return;
+    if (!sectionRef.current || reducedMotion) return;
     rectRef.current = sectionRef.current.getBoundingClientRect();
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLElement>) => {
-    if (reducedMotion || tier !== 'high' || e.pointerType === 'touch' || window.innerWidth < 1024) return;
+    if (reducedMotion || e.pointerType === 'touch' || window.innerWidth < 1024) return;
     const rect = rectRef.current || sectionRef.current?.getBoundingClientRect();
     if (!rect) return;
     rectRef.current = rect;
@@ -331,7 +329,7 @@ export const SystemSection: React.FC = React.memo(() => {
               <div className="mx-auto h-4 w-24 rounded-full bg-black border border-white/10" />
 
               <div className="mt-2 flex flex-col items-center">
-                <JSLogo size="sm" />
+                <JSLogo size="xs" />
               </div>
 
               <div className="my-auto flex flex-col items-center">
@@ -431,6 +429,7 @@ export const SystemSection: React.FC = React.memo(() => {
           </div>
         </div>
       </div>
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 section-divider-glow" />
     </section>
   );
 });

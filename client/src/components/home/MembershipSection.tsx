@@ -4,27 +4,26 @@ import { loadGsap } from '../../lib/gsapBridge';
 import { HOME_COPY, PricingPhase } from '../../config/siteConfig';
 import { useSiteContent } from '../../context/ContentContext';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { useTier } from '../../lib/perfTier';
-import { onFirstUserInteraction, scheduleChunkedTask } from '../../lib/scheduler';
+import { scheduleChunkedTask } from '../../lib/scheduler';
 import { Button } from '../ui/Button';
 import { DrawPath } from '../ui/DrawPath';
 import { TiltCard } from '../ui/TiltCard';
+import { Reveal } from '../ui/Reveal';
 
 const PhaseIcon: React.FC<{ icon: PricingPhase['icon'] }> = ({ icon }) => {
   switch (icon) {
     case 'star':
-      return <Star className="w-5 h-5 text-[#B6F500] fill-[#B6F500]/20" />;
+      return <Star className="w-5 h-5 text-[#B6F500] fill-[#B6F500]/20" strokeWidth={1.85} />;
     case 'bars':
-      return <BarChart3 className="w-5 h-5 text-[#B6F500]" />;
+      return <BarChart3 className="w-5 h-5 text-[#B6F500]" strokeWidth={1.85} />;
     case 'crown':
-      return <Crown className="w-5 h-5 text-[#B6F500]" />;
+      return <Crown className="w-5 h-5 text-[#B6F500]" strokeWidth={1.85} />;
   }
 };
 
 export const MembershipSection: React.FC = React.memo(() => {
   const { config } = useSiteContent();
   const reducedMotion = useReducedMotion();
-  const tier = useTier();
   const sectionRef = useRef<HTMLElement>(null);
   const bgRef = useRef<HTMLImageElement>(null);
   const accessRef = useRef<HTMLDivElement>(null);
@@ -32,12 +31,13 @@ export const MembershipSection: React.FC = React.memo(() => {
   const hoursRef = useRef<HTMLSpanElement>(null);
   const daysRef = useRef<HTMLSpanElement>(null);
   const slashRef = useRef<HTMLSpanElement>(null);
+  const hasAnimatedRef = useRef(false);
 
   useEffect(() => {
     const el = sectionRef.current;
     if (!el) return;
 
-    if (reducedMotion || tier !== 'high' || navigator.webdriver) {
+    if (reducedMotion) {
       if (hoursRef.current) hoursRef.current.textContent = '24';
       if (daysRef.current) daysRef.current.textContent = '7';
       if (slashRef.current) slashRef.current.style.opacity = '1';
@@ -46,12 +46,10 @@ export const MembershipSection: React.FC = React.memo(() => {
 
     let cancelled = false;
     let ctx: gsap.Context | null = null;
-    let cancelTask: (() => void) | null = null;
-    const cancelInteract = onFirstUserInteraction(() => {
-      cancelTask = scheduleChunkedTask(() => {
-        loadGsap().then(({ gsap }) => {
-          if (cancelled || !sectionRef.current) return;
-          ctx = gsap.context(() => {
+    const cancelTask = scheduleChunkedTask(() => {
+      loadGsap().then(({ gsap }) => {
+        if (cancelled || !sectionRef.current) return;
+        ctx = gsap.context(() => {
           if (bgRef.current) {
             gsap.fromTo(
               bgRef.current,
@@ -72,57 +70,62 @@ export const MembershipSection: React.FC = React.memo(() => {
           const odometer = { h: 0, d: 0 };
           let lastH = -1;
           let lastD = -1;
-          const tl = gsap.timeline({
-            scrollTrigger: {
-              trigger: el,
-              start: 'top 76%',
-              once: true,
-            },
-          });
+          if (!hasAnimatedRef.current) {
+            const tl = gsap.timeline({
+              scrollTrigger: {
+                trigger: el,
+                start: 'top 80%',
+                once: true,
+                onEnter: () => {
+                  hasAnimatedRef.current = true;
+                },
+              },
+            });
 
-          tl.to(odometer, {
-            h: 24,
-            d: 7,
-            duration: 0.8,
-            ease: 'power3.out',
-            onUpdate: () => {
-              const h = Math.round(odometer.h);
-              const d = Math.round(odometer.d);
-              if (h !== lastH && hoursRef.current) {
-                lastH = h;
-                hoursRef.current.textContent = String(h);
-              }
-              if (d !== lastD && daysRef.current) {
-                lastD = d;
-                daysRef.current.textContent = String(d);
-              }
-            },
-          })
-            .fromTo(
-              slashRef.current,
-              { y: -20, opacity: 0 },
-              { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
-              0.3
-            )
-            .fromTo(
-              accessRef.current,
-              { x: -24, opacity: 0 },
-              { x: 0, opacity: 1, duration: 0.7, ease: 'power3.out' },
-              0.3
-            );
+            tl.to(odometer, {
+              h: 24,
+              d: 7,
+              duration: 0.75,
+              ease: 'power3.out',
+              onUpdate: () => {
+                const h = Math.round(odometer.h);
+                const d = Math.round(odometer.d);
+                if (h !== lastH && hoursRef.current) {
+                  lastH = h;
+                  hoursRef.current.textContent = String(h);
+                }
+                if (d !== lastD && daysRef.current) {
+                  lastD = d;
+                  daysRef.current.textContent = String(d);
+                }
+              },
+            })
+              .fromTo(
+                slashRef.current,
+                { y: -20, opacity: 0 },
+                { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out' },
+                0.25
+              )
+              .fromTo(
+                accessRef.current,
+                { x: -24, opacity: 0 },
+                { x: 0, opacity: 1, duration: 0.65, ease: 'power3.out' },
+                0.25
+              );
+          }
 
           if (cardRef.current) {
             gsap.fromTo(
               cardRef.current,
-              { x: 45, opacity: 0 },
+              { x: 40, opacity: 0 },
               {
                 x: 0,
                 opacity: 1,
-                duration: 0.75,
+                duration: 0.7,
                 ease: 'power3.out',
                 scrollTrigger: {
                   trigger: cardRef.current,
-                  start: 'top 84%',
+                  start: 'top 86%',
                   once: true,
                 },
               }
@@ -137,28 +140,26 @@ export const MembershipSection: React.FC = React.memo(() => {
                 opacity: 1,
                 duration: 0.45,
                 stagger: 0.1,
-                delay: 0.15,
+                delay: 0.12,
                 ease: 'power3.out',
                 scrollTrigger: {
                   trigger: cardRef.current,
-                  start: 'top 84%',
+                  start: 'top 86%',
                   once: true,
                 },
               }
             );
           }
         }, el);
-        });
       });
     });
 
     return () => {
       cancelled = true;
-      cancelInteract();
       cancelTask?.();
       ctx?.revert();
     };
-  }, [reducedMotion, tier]);
+  }, [reducedMotion]);
 
   return (
     <section
@@ -209,7 +210,8 @@ export const MembershipSection: React.FC = React.memo(() => {
       </svg>
 
       <div className="relative z-10 mx-auto max-w-[1280px] px-5 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 items-center gap-12">
+        <Reveal>
+          <div className="grid grid-cols-1 lg:grid-cols-12 items-center gap-12">
           {/* Left column */}
           <div className="lg:col-span-6">
             <div className="eyebrow-row mb-5">{HOME_COPY.membership.eyebrow}</div>
@@ -248,7 +250,7 @@ export const MembershipSection: React.FC = React.memo(() => {
           <div className="lg:col-span-6 flex justify-center lg:justify-end">
             <div ref={cardRef} className="w-full max-w-[360px]">
               <TiltCard maxTilt={5} className="rounded-[24px]">
-                <div className="glass-panel-lime glass-blur rounded-[24px] p-5 sm:p-6 shadow-[0_24px_60px_rgba(0,0,0,0.75)]">
+                <div className="card-unified-lime card-hover-lift glass-blur p-5 sm:p-6 shadow-[0_24px_60px_rgba(0,0,0,0.75)]">
                   <div className="mb-5 flex items-center gap-3">
                     <span className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-[#B6F500]/70" />
                     <h3 className="font-display italic font-extrabold text-[15px] uppercase tracking-[0.14em] text-white whitespace-nowrap">
@@ -327,7 +329,9 @@ export const MembershipSection: React.FC = React.memo(() => {
             </div>
           </div>
         </div>
+        </Reveal>
       </div>
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 section-divider-glow" />
     </section>
   );
 });

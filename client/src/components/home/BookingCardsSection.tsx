@@ -4,8 +4,7 @@ import { loadGsap } from '../../lib/gsapBridge';
 import { HOME_COPY } from '../../config/siteConfig';
 import { useSiteContent } from '../../context/ContentContext';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { useTier } from '../../lib/perfTier';
-import { onFirstUserInteraction, scheduleChunkedTask } from '../../lib/scheduler';
+import { scheduleChunkedTask } from '../../lib/scheduler';
 import { Button } from '../ui/Button';
 import { TiltCard } from '../ui/TiltCard';
 import { CountUp } from '../ui/CountUp';
@@ -19,7 +18,6 @@ export const BookingCardsSection: React.FC<BookingCardsSectionProps> = React.mem
   ({ onPrefetchCalendly }) => {
     const { openBooking } = useSiteContent();
     const reducedMotion = useReducedMotion();
-    const tier = useTier();
     const sectionRef = useRef<HTMLElement>(null);
     const cardsRef = useRef<HTMLDivElement>(null);
     const dumbbellsRef = useRef<HTMLImageElement>(null);
@@ -27,13 +25,12 @@ export const BookingCardsSection: React.FC<BookingCardsSectionProps> = React.mem
 
     useEffect(() => {
       const el = sectionRef.current;
-      if (!el || reducedMotion || tier !== 'high' || navigator.webdriver) return;
+      if (!el || reducedMotion) return;
 
       let cancelled = false;
       let floatD: gsap.core.Tween | null = null;
       let floatS: gsap.core.Tween | null = null;
       let ctx: gsap.Context | null = null;
-      let cancelTask: (() => void) | null = null;
       let inView = false;
 
       const sync = () => {
@@ -46,19 +43,18 @@ export const BookingCardsSection: React.FC<BookingCardsSectionProps> = React.mem
         }
       };
 
-      const cancelInteract = onFirstUserInteraction(() => {
-        cancelTask = scheduleChunkedTask(() => {
-          loadGsap().then(({ gsap }) => {
-            if (cancelled || !sectionRef.current) return;
-            ctx = gsap.context(() => {
+      const cancelTask = scheduleChunkedTask(() => {
+        loadGsap().then(({ gsap }) => {
+          if (cancelled || !sectionRef.current) return;
+          ctx = gsap.context(() => {
             if (cardsRef.current) {
               gsap.fromTo(
                 cardsRef.current.children,
-                { y: 36, opacity: 0 },
+                { y: 34, opacity: 0 },
                 {
                   y: 0,
                   opacity: 1,
-                  duration: 0.7,
+                  duration: 0.65,
                   stagger: 0.14,
                   ease: 'power3.out',
                   scrollTrigger: {
@@ -89,9 +85,8 @@ export const BookingCardsSection: React.FC<BookingCardsSectionProps> = React.mem
               ease: 'sine.inOut',
               paused: true,
             });
-            }, el);
-            sync();
-          });
+          }, el);
+          sync();
         });
       });
 
@@ -107,13 +102,12 @@ export const BookingCardsSection: React.FC<BookingCardsSectionProps> = React.mem
 
       return () => {
         cancelled = true;
-        cancelInteract();
         cancelTask?.();
         io.disconnect();
         document.removeEventListener('visibilitychange', sync);
         ctx?.revert();
       };
-    }, [reducedMotion, tier]);
+    }, [reducedMotion]);
 
     return (
       <section
@@ -155,7 +149,7 @@ export const BookingCardsSection: React.FC<BookingCardsSectionProps> = React.mem
               >
                 <div className="relative z-10 max-w-[330px]">
                   <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-black/10 text-[#050505]">
-                    <CalendarDays className="w-6 h-6 stroke-[2.2]" />
+                    <CalendarDays className="w-5 h-5" strokeWidth={1.85} />
                   </div>
 
                   <h3 className="font-display italic font-black text-[30px] sm:text-[36px] leading-[0.94] uppercase text-[#050505]">
@@ -210,10 +204,10 @@ export const BookingCardsSection: React.FC<BookingCardsSectionProps> = React.mem
 
                 <div className="relative z-10 flex items-center justify-between gap-3">
                   <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#B6F500]/10 border border-[#B6F500]/35 text-[#B6F500]">
-                    <Diamond className="w-5 h-5" />
+                    <Diamond className="w-5 h-5" strokeWidth={1.85} />
                   </div>
 
-                  <span className="relative overflow-hidden rounded-full bg-[#B6F500] px-3.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-[#050505]">
+                  <span className="badge-shimmer relative overflow-hidden rounded-full bg-[#B6F500] px-3.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-[#050505]">
                     {HOME_COPY.bookingCards.assessment.badge}
                   </span>
                 </div>

@@ -211,8 +211,8 @@ export const AdminLayout: React.FC = () => {
     return (
       <div className="min-h-screen bg-[#050505] flex items-center justify-center px-5">
         <div className="w-full max-w-md rounded-[28px] glass-panel-lime p-8 shadow-lime">
-          <div className="mb-6 flex justify-center">
-            <JSLogo size="md" />
+          <div className="mb-5 flex justify-center">
+            <JSLogo size="lg" priority />
           </div>
           <h1 className="font-display italic font-black text-3xl uppercase text-center text-white mb-2">
             OWNER ADMIN PORTAL
@@ -286,9 +286,9 @@ export const AdminLayout: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#050505] text-white">
       {/* Top Bar */}
-      <header className="sticky top-0 z-30 border-b border-[#B6F500]/20 bg-[#050505]/90 backdrop-blur-xl px-6 py-3.5 flex items-center justify-between">
+      <header className="sticky top-0 z-30 border-b border-[#B6F500]/20 bg-[#050505]/90 backdrop-blur-xl px-6 py-2.5 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <JSLogo size="sm" />
+          <JSLogo size="xs" priority />
           <span className="rounded-full bg-[#B6F500]/15 border border-[#B6F500]/40 px-3 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[#B6F500]">
             Admin Console
           </span>

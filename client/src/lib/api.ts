@@ -1,3 +1,9 @@
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+
+export function apiUrl(path: string): string {
+  return `${API_BASE}${path}`;
+}
+
 export interface TransformationItem {
   id: string;
   name: string;
@@ -61,7 +67,7 @@ export interface PublicContentPayload {
 }
 
 export async function fetchPublicContent(): Promise<PublicContentPayload> {
-  const res = await fetch('/api/content', { credentials: 'include' });
+  const res = await fetch(apiUrl('/api/content'), { credentials: 'include' });
   if (!res.ok) throw new Error('Failed to load site content');
   return res.json();
 }
@@ -74,7 +80,7 @@ export async function submitContact(payload: {
   message: string;
   website?: string;
 }) {
-  const res = await fetch('/api/contact', {
+  const res = await fetch(apiUrl('/api/contact'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

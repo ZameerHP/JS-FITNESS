@@ -1,29 +1,35 @@
-// Prisma Schema for JS FITNESS INC
-// Local dev uses SQLite ("sqlite"). For production PostgreSQL, switch provider to "postgresql".
+// Prisma Schema for JS FITNESS INC — Supabase PostgreSQL
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model AdminUser {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  totpSecret   String?
-  totpEnabled  Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id             String   @id @default(cuid())
+  email          String   @unique
+  passwordHash   String   @map("password_hash")
+  supabaseUserId String?  @unique @map("supabase_user_id")
+  totpSecret     String?  @map("totp_secret")
+  totpEnabled    Boolean  @default(false) @map("totp_enabled")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("admin_users")
 }
 
 model SiteSetting {
   key       String   @id
   value     String
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("site_settings")
 }
 
 model Transformation {
@@ -32,15 +38,16 @@ model Transformation {
   timeframe   String
   category    String   @default("Fat Loss & Muscle")
   story       String   @default("")
-  beforeImage String
-  afterImage  String
-  isDemo      Boolean  @default(false)
+  beforeImage String   @map("before_image")
+  afterImage  String   @map("after_image")
+  isDemo      Boolean  @default(false) @map("is_demo")
   visible     Boolean  @default(true)
   order       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@index([visible, order])
+  @@map("transformations")
 }
 
 model Testimonial {
@@ -49,40 +56,43 @@ model Testimonial {
   role      String   @default("JS FITNESS Member")
   quote     String
   rating    Int      @default(5)
-  avatarUrl String?
+  avatarUrl String?  @map("avatar_url")
   visible   Boolean  @default(true)
   order     Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@index([visible, order])
+  @@map("testimonials")
 }
 
 model GalleryItem {
   id        String   @id @default(cuid())
   title     String
-  imageUrl  String
+  imageUrl  String   @map("image_url")
   category  String   @default("Facility")
   visible   Boolean  @default(true)
   order     Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@index([visible, order])
+  @@map("gallery_items")
 }
 
 model VideoItem {
   id            String   @id @default(cuid())
   title         String
   url           String
-  thumbnailUrl  String?
-  isWalkthrough Boolean  @default(false)
+  thumbnailUrl  String?  @map("thumbnail_url")
+  isWalkthrough Boolean  @default(false) @map("is_walkthrough")
   visible       Boolean  @default(true)
   order         Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@index([visible, order])
+  @@map("video_items")
 }
 
 model Certification {
@@ -90,13 +100,14 @@ model Certification {
   title     String
   issuer    String
   year      String   @default("")
-  imageUrl  String?
+  imageUrl  String?  @map("image_url")
   visible   Boolean  @default(true)
   order     Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@index([visible, order])
+  @@map("certifications")
 }
 
 model ContactSubmission {
@@ -107,5 +118,8 @@ model ContactSubmission {
   interest  String
   message   String
   read      Boolean  @default(false)
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([read, createdAt])
+  @@map("contact_submissions")
 }

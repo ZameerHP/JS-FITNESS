@@ -29,7 +29,12 @@ services:
       PORT: 4000
       CLIENT_URL: https://jsfitness.ca,https://www.jsfitness.ca
       COOKIE_SECURE: "true"
-      DATABASE_URL: postgresql://jsfitness:${POSTGRES_PASSWORD:-change_this_pg_password}@postgres:5432/jsfitness?schema=public
+      DATABASE_URL: ${DATABASE_URL:-postgresql://jsfitness:change_this_pg_password@postgres:5432/jsfitness?schema=public}
+      DIRECT_URL: ${DIRECT_URL:-postgresql://jsfitness:change_this_pg_password@postgres:5432/jsfitness?schema=public}
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      SUPABASE_STORAGE_BUCKET: ${SUPABASE_STORAGE_BUCKET:-media}
       JWT_SECRET: ${JWT_SECRET}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@jsfitness.ca}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}

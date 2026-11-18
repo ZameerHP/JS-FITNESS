@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { loadGsap } from '../../lib/gsapBridge';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { useTier } from '../../lib/perfTier';
 
 interface SplitRevealProps {
   text: string;
@@ -15,17 +14,36 @@ interface SplitRevealProps {
   revertOnComplete?: boolean;
 }
 
+const GRADIENT_TEXT_CLASSES = ['text-metallic', 'text-cream-metallic', 'text-lime-glow'];
+
+function partitionClasses(className: string): { wrapperClass: string; tokenClass: string } {
+  const tokens = className.split(/\s+/).filter(Boolean);
+  const tokenClasses: string[] = [];
+  const wrapperClasses: string[] = [];
+  for (const cls of tokens) {
+    if (GRADIENT_TEXT_CLASSES.includes(cls)) {
+      tokenClasses.push(cls);
+    } else {
+      wrapperClasses.push(cls);
+    }
+  }
+  return {
+    wrapperClass: wrapperClasses.join(' '),
+    tokenClass: tokenClasses.join(' '),
+  };
+}
+
 const SplitRevealAnimated: React.FC<SplitRevealProps> = ({
   text,
-  mode = 'words',
   className = '',
   as: Tag = 'div',
-  stagger = 0.025,
+  stagger = 0.055,
   delay = 0,
   trigger = false,
   active = true,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const { wrapperClass, tokenClass } = partitionClasses(className);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -35,8 +53,8 @@ const SplitRevealAnimated: React.FC<SplitRevealProps> = ({
     const tokens = el.querySelectorAll('.split-token');
     if (tokens.length === 0) return;
 
-    const startYPercent = trigger ? 80 : 100;
-    const startOpacity = trigger ? 1 : 0;
+    const startY = trigger ? 16 : 22;
+    const startOpacity = trigger ? 0.92 : 0;
     let cancelled = false;
     let ctx: gsap.Context | null = null;
 
@@ -45,15 +63,15 @@ const SplitRevealAnimated: React.FC<SplitRevealProps> = ({
       ctx = gsap.context(() => {
         gsap.fromTo(
           tokens,
-          { yPercent: startYPercent, skewY: 5, opacity: startOpacity },
+          { y: startY, opacity: startOpacity },
           {
-            yPercent: 0,
-            skewY: 0,
+            y: 0,
             opacity: 1,
-            duration: 0.65,
+            duration: 0.6,
             stagger,
             delay,
-            ease: 'power4.out',
+            ease: 'power3.out',
+            clearProps: 'transform,opacity',
             scrollTrigger: trigger
               ? undefined
               : {
@@ -70,30 +88,21 @@ const SplitRevealAnimated: React.FC<SplitRevealProps> = ({
       cancelled = true;
       ctx?.revert();
     };
-  }, [text, mode, stagger, delay, trigger, active]);
+  }, [text, stagger, delay, trigger, active]);
 
   const words = text.split(' ');
 
   return (
-    <Tag ref={containerRef as React.RefObject<never>} className={className} aria-label={text}>
+    <Tag ref={containerRef as React.RefObject<never>} className={wrapperClass} aria-label={text}>
       {words.map((word, wIdx) => (
-        <span key={`${word}-${wIdx}`} className="inline-block whitespace-nowrap">
-          {mode === 'words' ? (
-            <span className="inline-block overflow-hidden align-bottom pb-[0.06em]">
-              <span className="split-token inline-block">{word}</span>
-            </span>
-          ) : (
-            word.split('').map((char, cIdx) => (
-              <span
-                key={`${wIdx}-${cIdx}`}
-                className="inline-block overflow-hidden align-bottom pb-[0.06em]"
-              >
-                <span className="split-token inline-block">{char}</span>
-              </span>
-            ))
-          )}
-          {wIdx < words.length - 1 ? <span>&nbsp;</span> : null}
-        </span>
+        <React.Fragment key={`${word}-${wIdx}`}>
+          <span
+            className={`split-token inline-block ${tokenClass ? `${tokenClass} pr-[0.04em] -mr-[0.04em]` : ''}`}
+          >
+            {word}
+          </span>
+          {wIdx < words.length - 1 ? ' ' : null}
+        </React.Fragment>
       ))}
     </Tag>
   );
@@ -102,10 +111,8 @@ const SplitRevealAnimated: React.FC<SplitRevealProps> = ({
 export const SplitReveal: React.FC<SplitRevealProps> = React.memo((props) => {
   const { text, className = '', as: Tag = 'div' } = props;
   const reducedMotion = useReducedMotion();
-  const tier = useTier();
-  const isAutomated = typeof navigator !== 'undefined' && Boolean(navigator.webdriver);
 
-  if (reducedMotion || tier !== 'high' || isAutomated) {
+  if (reducedMotion) {
     return (
       <Tag className={className} aria-label={text}>
         {text}

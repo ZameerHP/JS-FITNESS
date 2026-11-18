@@ -3,6 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "vercel-build": "npm --prefix server run prisma:generate && npm --prefix server run build && npm --prefix client run build",
+    "supabase:migrate": "npm --prefix server run supabase:migrate",
+    "supabase:verify": "npm --prefix server run supabase:verify",
     "perf:baseline": "node scripts/perf-audit.mjs --mode=baseline",
     "perf:verify": "node scripts/perf-audit.mjs --mode=after",
     "test:smoothness": "node scripts/verify-smoothness.mjs"

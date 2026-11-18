@@ -41,14 +41,14 @@ export const Button: React.FC<ButtonProps> = React.memo(({
 
   const variantStyles: Record<ButtonVariant, string> = {
     primary:
-      'h-[46px] px-7 bg-[#B6F500] text-[#050505] shadow-[0_0_24px_rgba(182,245,0,0.35)] hover:bg-[#c5ff1a]',
+      'h-[48px] px-7 bg-[#B6F500] text-[#050505] font-black shadow-[0_0_28px_rgba(182,245,0,0.45),0_8px_22px_rgba(0,0,0,0.5)] hover:bg-[#c8ff29] hover:shadow-[0_0_38px_rgba(182,245,0,0.65),0_12px_28px_rgba(0,0,0,0.6)]',
     outline:
-      'h-[44px] px-6 bg-transparent border-[1.5px] border-[#B6F500] text-white hover:bg-[#B6F500] hover:text-[#050505]',
+      'h-[44px] px-6 bg-white/[0.02] border-[1.5px] border-[#B6F500]/65 text-white/95 hover:bg-[#B6F500] hover:border-[#B6F500] hover:text-[#050505]',
     'white-outline':
-      'h-[46px] px-6 bg-white/[0.04] border-[1.5px] border-white/60 text-white hover:bg-[#B6F500] hover:border-[#B6F500] hover:text-[#050505]',
+      'h-[44px] px-6 bg-white/[0.02] border-[1.5px] border-white/40 text-white/90 hover:bg-[#B6F500] hover:border-[#B6F500] hover:text-[#050505]',
     'dark-pill':
-      'h-[42px] px-6 bg-[#050505] text-white border border-[#050505] hover:bg-[#151715]',
-    nav: 'h-[36px] px-5 bg-transparent border-[1.5px] border-[#B6F500]/80 text-[#B6F500] text-[11px] hover:bg-[#B6F500] hover:text-[#050505]',
+      'h-[44px] px-6 bg-[#050505] text-white border border-[#050505] shadow-[0_10px_24px_rgba(0,0,0,0.45)] hover:bg-[#151715]',
+    nav: 'h-[36px] px-5 bg-transparent border-[1.5px] border-[#B6F500]/80 text-[#B6F500] text-[11px] hover:bg-[#B6F500] hover:text-[#050505] hover:shadow-[0_0_18px_rgba(182,245,0,0.4)]',
   };
 
   const content = (

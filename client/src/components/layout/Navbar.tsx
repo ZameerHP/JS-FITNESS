@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { NAV_LINKS } from '../../config/siteConfig';
@@ -15,16 +15,29 @@ export const Navbar: React.FC<NavbarProps> = React.memo(({ onPrefetchRoute }) =>
   const location = useLocation();
   const { openBooking } = useSiteContent();
   const headerRef = useRef<HTMLElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const linkRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
   const mobileOpenRef = useRef(false);
-  const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [hoveredPath, setHoveredPath] = useState<string | null>(null);
+  const [indicator, setIndicator] = useState<{ left: number; width: number }>({
+    left: 0,
+    width: 0,
+  });
 
   useEffect(() => {
     mobileOpenRef.current = mobileOpen;
   }, [mobileOpen]);
 
+  // Clear stale hover target & mobile drawer on every route change
+  useEffect(() => {
+    setMobileOpen(false);
+    setHoveredPath(null);
+  }, [location.pathname]);
+
   useEffect(() => {
     let lastY = window.scrollY;
-    let isScrolled = false;
+    let isScrolled = window.scrollY > 36;
     let isHidden = false;
 
     const applyClasses = () => {
@@ -34,6 +47,8 @@ export const Navbar: React.FC<NavbarProps> = React.memo(({ onPrefetchRoute }) =>
       el.classList.toggle('translate-y-0', !isHidden || mobileOpenRef.current);
       el.classList.toggle('navbar-scrolled', isScrolled);
     };
+
+    applyClasses();
 
     return subscribeScroll((y) => {
       const nextScrolled = y > 36;
@@ -50,41 +65,88 @@ export const Navbar: React.FC<NavbarProps> = React.memo(({ onPrefetchRoute }) =>
     });
   }, []);
 
+  const updateIndicator = useCallback(() => {
+    const targetPath = hoveredPath ?? location.pathname;
+    const linkEl = linkRefs.current[targetPath];
+    const navEl = navRef.current;
+    if (!linkEl || !navEl) {
+      setIndicator((prev) => (prev.width === 0 ? prev : { left: 0, width: 0 }));
+      return;
+    }
+    const left = linkEl.offsetLeft;
+    const width = linkEl.offsetWidth;
+    setIndicator((prev) =>
+      prev.left === left && prev.width === width ? prev : { left, width }
+    );
+  }, [hoveredPath, location.pathname]);
+
+  useLayoutEffect(() => {
+    updateIndicator();
+  }, [updateIndicator]);
+
   useEffect(() => {
-    setMobileOpen(false);
-  }, [location.pathname]);
+    const handleResize = () => updateIndicator();
+    window.addEventListener('resize', handleResize, { passive: true });
+    return () => window.removeEventListener('resize', handleResize);
+  }, [updateIndicator]);
 
   return (
     <>
       <header
         ref={headerRef}
-        className="fixed top-0 left-0 right-0 z-50 h-[72px] translate-y-0 bg-transparent border-b border-transparent transition-[transform,background-color,border-color] duration-300"
+        className="group site-header fixed top-0 left-0 right-0 z-50 translate-y-0 bg-transparent border-b border-transparent transition-[height,transform,background-color,border-color] duration-300"
       >
         <div className="mx-auto flex h-full max-w-[1280px] items-center justify-between px-5 lg:px-8">
-          <Link to="/" className="shrink-0">
-            <JSLogo size="sm" />
+          <Link
+            to="/"
+            className="inline-flex items-center shrink-0 transition-transform duration-300 group-[.navbar-scrolled]:scale-[0.88] hover:scale-[1.03]"
+          >
+            <JSLogo size="sm" priority />
           </Link>
 
-          <nav aria-label="Main navigation" className="hidden min-[820px]:flex items-center gap-4 lg:gap-7">
+          <nav
+            ref={navRef}
+            aria-label="Main navigation"
+            onMouseLeave={() => setHoveredPath(null)}
+            className="relative hidden min-[820px]:flex items-center gap-4 lg:gap-7"
+          >
             {NAV_LINKS.map((item) => {
               const isActive = location.pathname === item.path;
               return (
                 <Link
                   key={item.path}
+                  ref={(el) => {
+                    linkRefs.current[item.path] = el;
+                  }}
                   to={item.path}
-                  onMouseEnter={() => onPrefetchRoute?.(item.path)}
+                  onMouseEnter={() => {
+                    setHoveredPath(item.path);
+                    onPrefetchRoute?.(item.path);
+                  }}
+                  onFocus={() => setHoveredPath(item.path)}
+                  onBlur={() => setHoveredPath(null)}
                   onTouchStart={() => onPrefetchRoute?.(item.path)}
-                  className={`relative py-2 text-[11px] lg:text-[12px] font-medium tracking-[0.02em] whitespace-nowrap transition-colors ${
-                    isActive ? 'text-[#B6F500]' : 'text-white/80 hover:text-white'
+                  className={`relative py-2 text-[11px] lg:text-[12px] font-medium tracking-[0.02em] whitespace-nowrap ${
+                    isActive
+                      ? 'text-[#B6F500]'
+                      : 'text-white/80 hover:text-white transition-colors duration-150'
                   }`}
                 >
                   {item.label}
-                  {isActive && (
-                    <span className="absolute left-0 right-0 -bottom-0.5 h-[2px] rounded-full bg-[#B6F500] shadow-[0_0_8px_#B6F500]" />
-                  )}
                 </Link>
               );
             })}
+
+            {/* Single sliding underline bar synced to hover or active route */}
+            <span
+              aria-hidden="true"
+              style={{
+                transform: `translate3d(${indicator.left}px, 0, 0)`,
+                width: `${indicator.width}px`,
+                opacity: indicator.width > 0 ? 1 : 0,
+              }}
+              className="pointer-events-none absolute -bottom-0.5 left-0 h-[2px] rounded-full bg-[#B6F500] shadow-[0_0_8px_#B6F500] transition-[transform,width,opacity] duration-200 ease-out"
+            />
           </nav>
 
           <div className="flex items-center gap-3">
@@ -128,7 +190,13 @@ export const Navbar: React.FC<NavbarProps> = React.memo(({ onPrefetchRoute }) =>
           </div>
 
           <div className="pt-8 border-t border-white/10 flex flex-col gap-3">
-            <Button variant="primary" onClick={() => { setMobileOpen(false); openBooking('tour'); }}>
+            <Button
+              variant="primary"
+              onClick={() => {
+                setMobileOpen(false);
+                openBooking('tour');
+              }}
+            >
               BOOK YOUR FREE GYM TOUR
             </Button>
             <Button

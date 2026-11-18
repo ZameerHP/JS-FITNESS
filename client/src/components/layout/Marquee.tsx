@@ -10,8 +10,7 @@ export const Marquee: React.FC = React.memo(() => {
   useEffect(() => {
     const section = sectionRef.current;
     const track = trackRef.current;
-    const tier = document.documentElement.dataset.perf || 'high';
-    if (!section || !track || reducedMotion || tier !== 'high' || navigator.webdriver) return;
+    if (!section || !track || reducedMotion) return;
 
     let inView = false;
 
