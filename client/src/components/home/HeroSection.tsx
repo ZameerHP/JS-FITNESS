@@ -1,15 +1,13 @@
-import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Play } from 'lucide-react';
 import { loadGsap } from '../../lib/gsapBridge';
 import { HOME_COPY } from '../../config/siteConfig';
 import { useSiteContent } from '../../context/ContentContext';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { useTier, hasHardwareWebGL } from '../../lib/perfTier';
+import { useTier } from '../../lib/perfTier';
 import { subscribePointerTick } from '../../lib/pointer';
 import { Button } from '../ui/Button';
 import { SplitReveal } from '../ui/SplitReveal';
-
-const HeroParticlesCanvas = lazy(() => import('../three/HeroParticlesCanvas'));
 
 interface HeroSectionProps {
   ready: boolean;
@@ -24,7 +22,6 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
     const [isMobile, setIsMobile] = useState(() =>
       typeof window !== 'undefined' ? window.innerWidth < 768 : false
     );
-    const [mountParticles, setMountParticles] = useState(false);
     const [heroVisible, setHeroVisible] = useState(true);
 
     const sectionRef = useRef<HTMLElement>(null);
@@ -40,7 +37,6 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
     const buttonsRef = useRef<HTMLDivElement>(null);
     const rightTaglineRef = useRef<HTMLDivElement>(null);
     const rightUnderlineRef = useRef<HTMLDivElement>(null);
-    const pointerRef = useRef({ normX: 0, normY: 0 });
 
     const hasWalkthroughVideo = videos.some((v) => v.visible);
 
@@ -50,7 +46,7 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
       return () => window.removeEventListener('resize', check);
     }, []);
 
-    // Track Hero visibility + tab visibility for pausing WebGL & breathing loop
+    // Track Hero visibility + tab visibility for pausing breathing loop
     useEffect(() => {
       const el = sectionRef.current;
       if (!el || reducedMotion) return;
@@ -75,22 +71,6 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
         document.removeEventListener('visibilitychange', sync);
       };
     }, [reducedMotion]);
-
-    // Mount Three.js particles on hardware-WebGL desktop as soon as Preloader clears
-    useEffect(() => {
-      if (!ready || reducedMotion || isMobile || !hasHardwareWebGL()) {
-        setMountParticles(false);
-        return;
-      }
-
-      const timerId = window.setTimeout(() => {
-        setMountParticles(true);
-      }, 150);
-
-      return () => {
-        clearTimeout(timerId);
-      };
-    }, [ready, reducedMotion, isMobile]);
 
     // Single global pointer subscription via GSAP quickTo (zero extra RAF, zero React re-renders)
     useEffect(() => {
@@ -132,8 +112,6 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
         }, sectionRef);
 
         unsub = subscribePointerTick((ptr) => {
-          pointerRef.current.normX = ptr.normX;
-          pointerRef.current.normY = ptr.normY;
           if (!ptr.dirty) return;
           aX?.(ptr.normX * 12);
           aY?.(ptr.normY * 8);
@@ -303,8 +281,6 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
       };
     }, [ready, reducedMotion, isMobile]);
 
-    const particleCount = tier === 'high' ? (isMobile ? 60 : 150) : 60;
-
     return (
       <section
         ref={sectionRef}
@@ -332,21 +308,7 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
           />
         </div>
 
-        {/* Layer 2: Lazy-loaded GPU Shader Three.js particles (hardware WebGL desktop) */}
-        {mountParticles && tier === 'high' && !isMobile && !reducedMotion && (
-          <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[1]">
-            <Suspense fallback={null}>
-              <HeroParticlesCanvas
-                pointerRef={pointerRef}
-                particleCount={particleCount}
-                isMobile={isMobile}
-                active={heroVisible}
-              />
-            </Suspense>
-          </div>
-        )}
-
-        {/* Layer 3: Giant ghost outlined JS watermark */}
+        {/* Layer 2: Giant ghost outlined JS watermark */}
         <div
           ref={watermarkRef}
           aria-hidden="true"
