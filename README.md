@@ -70,11 +70,11 @@ Open `http://localhost:5173` (public site) or `http://localhost:5173/admin` (own
 
 ## Vercel Production Deployment (`jsfitness.ca`)
 
-This repository is pre-configured for **Vercel** via [`vercel.json`](vercel.json) and [`api/index.js`](api/index.js):
-- **Static SPA:** Built into `client/dist` (`npm run vercel-build`).
-- **Serverless API:** All `/api/*` routes execute Express + Prisma + Sharp + Supabase Storage/Auth via `/api/index.js`.
+This repository is pre-configured for **Vercel Services** via [`vercel.json`](vercel.json):
+- **`frontend` service (`client/`):** Vite React SPA built to `client/dist` with client-side route fallback and immutable static asset caching.
+- **`backend` service (`server/`):** Express + Prisma + Sharp + Supabase Auth/Storage API (`server/src/app.ts`) routed at `/api/*`.
 - **Steps to Deploy:**
-  1. Import the Git repository into Vercel (Root Directory: `./`, Framework Preset: `Other` / auto from `vercel.json`).
+  1. Import `ZameerHP/JS-FITNESS` (`main` branch) into Vercel (keep Root Directory `./` — Vercel automatically detects both services from `vercel.json`).
   2. Add all Environment Variables listed above in **Vercel → Settings → Environment Variables**.
   3. Deploy and verify `https://your-domain.vercel.app/api/health?deep=1`.
   4. Attach custom domain `jsfitness.ca` and `www.jsfitness.ca` in Vercel / Cloudflare DNS.

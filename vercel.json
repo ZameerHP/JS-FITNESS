@@ -1,13 +1,25 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": null,
-  "installCommand": "npm install --include=dev --prefix client && npm install --include=dev --prefix server",
-  "buildCommand": "npm run vercel-build",
-  "outputDirectory": "client/dist",
-  "functions": {
-    "api/index.js": {
-      "maxDuration": 30,
-      "includeFiles": "server/{node_modules/.prisma/**,node_modules/@prisma/**,prisma/schema.prisma}"
+  "services": {
+    "frontend": {
+      "root": "client",
+      "framework": "vite",
+      "installCommand": "npm install --include=dev",
+      "buildCommand": "npm run build",
+      "outputDirectory": "dist",
+      "rewrites": [
+        {
+          "source": "/((?!assets/|images/|fonts/|favicon|apple-touch-icon|robots\\.txt|sitemap\\.xml).*)",
+          "destination": "/index.html"
+        }
+      ]
+    },
+    "backend": {
+      "root": "server",
+      "framework": "express",
+      "entrypoint": "src/app.ts",
+      "installCommand": "npm install --include=dev",
+      "buildCommand": "npx prisma generate && npx tsc --noEmit"
     }
   },
   "headers": [
@@ -33,11 +45,11 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api/index"
+      "destination": { "service": "backend" }
     },
     {
-      "source": "/((?!api/|assets/|images/|fonts/|favicon|apple-touch-icon|robots\\.txt|sitemap\\.xml).*)",
-      "destination": "/index.html"
+      "source": "/(.*)",
+      "destination": { "service": "frontend" }
     }
   ]
 }
