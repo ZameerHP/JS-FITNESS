@@ -89,7 +89,7 @@ export async function buildPublicContent() {
     await Promise.all([
       prisma.siteSetting.findMany({ select: { key: true, value: true } }),
       prisma.transformation.findMany({
-        where: { visible: true, isDemo: false },
+        where: { visible: true },
         orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
         select: {
           id: true,

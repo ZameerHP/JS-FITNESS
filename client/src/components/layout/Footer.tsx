@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Phone, Mail, Instagram, Youtube, Facebook } from 'lucide-react';
+import { loadGsap } from '../../lib/gsapBridge';
 import { useSiteContent } from '../../context/ContentContext';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { scheduleChunkedTask } from '../../lib/scheduler';
 import { JSLogo } from '../ui/JSLogo';
 import { Button } from '../ui/Button';
 import { Magnetic } from '../ui/Magnetic';
@@ -9,6 +12,38 @@ import { TikTokIcon } from '../ui/Icons';
 
 export const Footer: React.FC = React.memo(() => {
   const { config, openBooking } = useSiteContent();
+  const plateRef = useRef<HTMLImageElement>(null);
+  const footerRef = useRef<HTMLElement>(null);
+  const reducedMotion = useReducedMotion();
+
+  useEffect(() => {
+    if (reducedMotion || !plateRef.current || !footerRef.current) return;
+    let cancelled = false;
+    let ctx: gsap.Context | null = null;
+    const cancelTask = scheduleChunkedTask(() => {
+      loadGsap().then(({ gsap }) => {
+        if (cancelled || !plateRef.current || !footerRef.current) return;
+        ctx = gsap.context(() => {
+          gsap.to(plateRef.current, {
+            rotation: 90,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: footerRef.current,
+              start: 'top bottom',
+              end: 'bottom bottom',
+              scrub: true,
+            },
+          });
+        }, footerRef);
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      cancelTask?.();
+      ctx?.revert();
+    };
+  }, [reducedMotion]);
 
   const socialItems = [
     {
@@ -34,10 +69,25 @@ export const Footer: React.FC = React.memo(() => {
   ];
 
   return (
-    <footer className="cv-section relative overflow-hidden bg-[#050505] pt-14 pb-24">
+    <footer
+      ref={footerRef}
+      className="cv-section relative overflow-hidden bg-[#050505] pt-14 pb-24"
+    >
       <div
         aria-hidden="true"
         className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-[#B6F500] to-transparent shadow-[0_0_24px_rgba(182,245,0,0.75)]"
+      />
+
+      <img
+        ref={plateRef}
+        src="/images/plate.webp"
+        width={650}
+        height={559}
+        alt=""
+        aria-hidden="true"
+        loading="lazy"
+        decoding="async"
+        className="pointer-events-none hidden md:block absolute -right-24 top-1/2 -translate-y-1/2 w-56 h-56 object-contain opacity-60 select-none"
       />
 
       <div className="relative z-10 mx-auto max-w-[1280px] px-5 lg:px-8">

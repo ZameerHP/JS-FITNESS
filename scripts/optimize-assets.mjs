@@ -28,11 +28,19 @@ async function buildGrainTile() {
 // 2. Generate responsive WebP variants & ensure tight compression
 async function buildResponsiveImages() {
   const jobs = [
-    { src: 'facility-hero.webp', out: 'facility-hero-1200.webp', width: 1200, quality: 78 },
-    { src: 'facility-hero.webp', out: 'facility-hero-800.webp', width: 800, quality: 76 },
-    { src: 'facility-floor.webp', out: 'facility-floor-1200.webp', width: 1200, quality: 78 },
-    { src: 'facility-floor.webp', out: 'facility-floor-800.webp', width: 800, quality: 76 },
-    { src: 'facility-neon-logo.webp', out: 'facility-neon-logo-700.webp', width: 700, quality: 82 },
+    { src: 'hero-bg.webp', out: 'hero-bg-1200.webp', width: 1200, quality: 78 },
+    { src: 'hero-bg.webp', out: 'hero-bg-800.webp', width: 800, quality: 76 },
+    { src: 'gym-interior.webp', out: 'gym-interior-1200.webp', width: 1200, quality: 78 },
+    { src: 'gym-interior.webp', out: 'gym-interior-800.webp', width: 800, quality: 76 },
+    { src: 'hero-athlete.webp', out: 'hero-athlete-700.webp', width: 700, quality: 84 },
+    { src: 'hero-athlete.webp', out: 'hero-athlete-480.webp', width: 480, quality: 76 },
+    { src: 'system-athlete.webp', out: 'system-athlete-600.webp', width: 600, quality: 82 },
+    { src: 'system-athlete.webp', out: 'system-athlete-400.webp', width: 400, quality: 74 },
+    { src: 'founder.webp', out: 'founder-700.webp', width: 700, quality: 82 },
+    { src: 'transform-male-before.webp', out: 'transform-male-before-320.webp', width: 320, quality: 78 },
+    { src: 'transform-male-after.webp', out: 'transform-male-after-320.webp', width: 320, quality: 78 },
+    { src: 'transform-female-before.webp', out: 'transform-female-before-320.webp', width: 320, quality: 78 },
+    { src: 'transform-female-after.webp', out: 'transform-female-after-320.webp', width: 320, quality: 78 },
   ];
 
   for (const job of jobs) {

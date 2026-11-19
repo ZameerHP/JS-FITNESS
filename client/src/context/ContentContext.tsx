@@ -27,54 +27,30 @@ interface ContentContextValue {
   setVideoModalOpen: (open: boolean) => void;
 }
 
-const DEFAULT_FACILITY_GALLERY: GalleryItem[] = [
+const DEFAULT_DEMO_TRANSFORMATIONS: TransformationItem[] = [
   {
-    id: 'facility-sign',
-    title: 'Train Eat Sleep Repeat — Exterior Sign',
-    imageUrl: '/images/facility-sign.webp',
-    category: 'Facility',
+    id: 'demo-1',
+    name: 'Demo Client — Arjun S.',
+    timeframe: '16 Weeks',
+    category: 'Fat Loss & Muscle',
+    story: 'Demo placeholder transformation showing structured nutrition, custom workouts, and weekly check-ins.',
+    beforeImage: '/images/transform-male-before.webp',
+    afterImage: '/images/transform-male-after.webp',
+    isDemo: true,
     visible: true,
     order: 0,
   },
   {
-    id: 'facility-strength',
-    title: 'JS FITNESS Strength Floor & Wall Crest',
-    imageUrl: '/images/facility-strength.webp',
-    category: 'Facility',
+    id: 'demo-2',
+    name: 'Demo Client — Priya K.',
+    timeframe: '16 Weeks',
+    category: 'Body Recomposition',
+    story: 'Demo placeholder transformation showing consistent strength training and lifestyle tracking.',
+    beforeImage: '/images/transform-female-before.webp',
+    afterImage: '/images/transform-female-after.webp',
+    isDemo: true,
     visible: true,
     order: 1,
-  },
-  {
-    id: 'facility-racks',
-    title: 'Power Racks & Smith Stations',
-    imageUrl: '/images/facility-racks.webp',
-    category: 'Equipment',
-    visible: true,
-    order: 2,
-  },
-  {
-    id: 'facility-dumbbells',
-    title: 'Pro-Style Dumbbell Line (5–120 lb)',
-    imageUrl: '/images/facility-dumbbells.webp',
-    category: 'Equipment',
-    visible: true,
-    order: 3,
-  },
-  {
-    id: 'facility-machines',
-    title: 'Plate-Loaded & Selectorized Press Line',
-    imageUrl: '/images/facility-machines.webp',
-    category: 'Equipment',
-    visible: true,
-    order: 4,
-  },
-  {
-    id: 'facility-legpress',
-    title: '45° Leg Press & Lower Body Zone',
-    imageUrl: '/images/facility-legpress.webp',
-    category: 'Equipment',
-    visible: true,
-    order: 5,
   },
 ];
 
@@ -82,9 +58,11 @@ const ContentContext = createContext<ContentContextValue | null>(null);
 
 export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [config, setConfig] = useState<SiteConfigData>(siteConfig);
-  const [transformations, setTransformations] = useState<TransformationItem[]>([]);
+  const [transformations, setTransformations] = useState<TransformationItem[]>(
+    DEFAULT_DEMO_TRANSFORMATIONS
+  );
   const [testimonials, setTestimonials] = useState<TestimonialItem[]>([]);
-  const [gallery, setGallery] = useState<GalleryItem[]>(DEFAULT_FACILITY_GALLERY);
+  const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [certifications, setCertifications] = useState<CertificationItem[]>([]);
   const [loading] = useState<boolean>(false);
@@ -119,16 +97,29 @@ export const ContentProvider: React.FC<{ children: React.ReactNode }> = ({ child
           return JSON.stringify(merged) === JSON.stringify(prev) ? prev : merged;
         });
 
-        const nextTrans = (data.transformations || []).filter((item) => !item.isDemo);
-        setTransformations((prev) =>
-          prev.length === 0 && nextTrans.length === 0 ? prev : nextTrans
-        );
+        const nextTrans = data.transformations || [];
+        setTransformations((prev) => {
+          if (
+            prev.length === nextTrans.length &&
+            nextTrans.every(
+              (item, idx) =>
+                item.isDemo &&
+                prev[idx]?.isDemo &&
+                item.beforeImage === prev[idx].beforeImage &&
+                item.afterImage === prev[idx].afterImage &&
+                item.name === prev[idx].name
+            )
+          ) {
+            return prev;
+          }
+          return nextTrans;
+        });
 
         const nextTestimonials = data.testimonials || [];
         setTestimonials((prev) => (prev.length === 0 && nextTestimonials.length === 0 ? prev : nextTestimonials));
 
-        const nextGallery = (data.gallery || []).filter((item) => Boolean(item.imageUrl));
-        setGallery(nextGallery.length > 0 ? nextGallery : DEFAULT_FACILITY_GALLERY);
+        const nextGallery = data.gallery || [];
+        setGallery((prev) => (prev.length === 0 && nextGallery.length === 0 ? prev : nextGallery));
 
         const nextVideos = data.videos || [];
         setVideos((prev) => (prev.length === 0 && nextVideos.length === 0 ? prev : nextVideos));

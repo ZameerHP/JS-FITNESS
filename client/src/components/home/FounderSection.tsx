@@ -134,12 +134,12 @@ export const FounderSection: React.FC = React.memo(() => {
             >
               <img
                 ref={photoImgRef}
-                src="/images/facility-neon-logo.webp"
-                srcSet="/images/facility-neon-logo-700.webp 700w, /images/facility-neon-logo.webp 1000w"
+                src="/images/founder.webp"
+                srcSet="/images/founder-700.webp 700w, /images/founder.webp 1000w"
                 sizes="(max-width: 1024px) 100vw, 600px"
                 width={1000}
                 height={1333}
-                alt="JS FITNESS INC Calgary NE neon wall crest"
+                alt="Jatinder Singh — Founder & Certified Personal Trainer at JS FITNESS INC"
                 loading="lazy"
                 decoding="async"
                 className="h-full w-full object-cover object-top"

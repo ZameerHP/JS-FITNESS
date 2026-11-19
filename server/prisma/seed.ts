@@ -124,55 +124,33 @@ async function main() {
     });
   }
 
-  await prisma.transformation.deleteMany({
-    where: { isDemo: true },
-  });
-
-  const existingGallery = await prisma.galleryItem.count();
-  if (existingGallery === 0) {
-    await prisma.galleryItem.createMany({
+  const existingTransforms = await prisma.transformation.count();
+  if (existingTransforms === 0) {
+    await prisma.transformation.createMany({
       data: [
         {
-          title: 'Train Eat Sleep Repeat — Exterior Sign',
-          imageUrl: '/images/facility-sign.webp',
-          category: 'Facility',
+          name: 'Demo Client — Arjun S.',
+          timeframe: '16 Weeks',
+          category: 'Fat Loss & Muscle',
+          story:
+            'Demo placeholder transformation showing structured nutrition, custom workouts, and weekly check-ins. Replace with real client photos in /admin.',
+          beforeImage: '/images/transform-male-before.webp',
+          afterImage: '/images/transform-male-after.webp',
+          isDemo: true,
           visible: true,
           order: 0,
         },
         {
-          title: 'JS FITNESS Strength Floor & Wall Crest',
-          imageUrl: '/images/facility-strength.webp',
-          category: 'Facility',
+          name: 'Demo Client — Priya K.',
+          timeframe: '16 Weeks',
+          category: 'Body Recomposition',
+          story:
+            'Demo placeholder transformation showing consistent strength training and lifestyle tracking. Replace with real client photos in /admin.',
+          beforeImage: '/images/transform-female-before.webp',
+          afterImage: '/images/transform-female-after.webp',
+          isDemo: true,
           visible: true,
           order: 1,
-        },
-        {
-          title: 'Power Racks & Smith Stations',
-          imageUrl: '/images/facility-racks.webp',
-          category: 'Equipment',
-          visible: true,
-          order: 2,
-        },
-        {
-          title: 'Pro-Style Dumbbell Line (5–120 lb)',
-          imageUrl: '/images/facility-dumbbells.webp',
-          category: 'Equipment',
-          visible: true,
-          order: 3,
-        },
-        {
-          title: 'Plate-Loaded & Selectorized Press Line',
-          imageUrl: '/images/facility-machines.webp',
-          category: 'Equipment',
-          visible: true,
-          order: 4,
-        },
-        {
-          title: '45° Leg Press & Lower Body Zone',
-          imageUrl: '/images/facility-legpress.webp',
-          category: 'Equipment',
-          visible: true,
-          order: 5,
         },
       ],
     });

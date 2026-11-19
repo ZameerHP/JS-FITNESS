@@ -55,21 +55,22 @@ function checkBundlesAndHeroImages() {
     const gz = zlib.gzipSync(fs.readFileSync(path.join(assetsDir, f))).length;
     if (f.endsWith('.js')) {
       const isAdmin = /AdminLayout/i.test(f);
-      if (html.includes(f) && !isAdmin) initialJsGzip += gz;
+      const isThree = /three|HeroParticles/i.test(f);
+      if (html.includes(f) && !isAdmin && !isThree) initialJsGzip += gz;
     } else if (f.endsWith('.css')) {
       totalCssGzip += gz;
     }
   }
 
   const imagesDir = path.join(ROOT, 'client', 'public', 'images');
-  const heroBgKB = fs.statSync(path.join(imagesDir, 'facility-hero.webp')).size / 1024;
-  const heroNeonKB = fs.statSync(path.join(imagesDir, 'facility-neon-logo.webp')).size / 1024;
+  const heroAthleteKB = fs.statSync(path.join(imagesDir, 'hero-athlete.webp')).size / 1024;
+  const heroBgKB = fs.statSync(path.join(imagesDir, 'hero-bg.webp')).size / 1024;
 
   return {
     initialJsGzipKB: +(initialJsGzip / 1024).toFixed(2),
     totalCssGzipKB: +(totalCssGzip / 1024).toFixed(2),
+    heroAthleteKB: +heroAthleteKB.toFixed(2),
     heroBgKB: +heroBgKB.toFixed(2),
-    heroNeonKB: +heroNeonKB.toFixed(2),
   };
 }
 

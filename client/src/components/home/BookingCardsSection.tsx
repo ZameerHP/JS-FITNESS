@@ -20,13 +20,28 @@ export const BookingCardsSection: React.FC<BookingCardsSectionProps> = React.mem
     const reducedMotion = useReducedMotion();
     const sectionRef = useRef<HTMLElement>(null);
     const cardsRef = useRef<HTMLDivElement>(null);
+    const dumbbellsRef = useRef<HTMLImageElement>(null);
+    const shakerRef = useRef<HTMLImageElement>(null);
 
     useEffect(() => {
       const el = sectionRef.current;
       if (!el || reducedMotion) return;
 
       let cancelled = false;
+      let floatD: gsap.core.Tween | null = null;
+      let floatS: gsap.core.Tween | null = null;
       let ctx: gsap.Context | null = null;
+      let inView = false;
+
+      const sync = () => {
+        if (inView && !document.hidden) {
+          floatD?.play();
+          floatS?.play();
+        } else {
+          floatD?.pause();
+          floatS?.pause();
+        }
+      };
 
       const cancelTask = scheduleChunkedTask(() => {
         loadGsap().then(({ gsap }) => {
@@ -50,13 +65,46 @@ export const BookingCardsSection: React.FC<BookingCardsSectionProps> = React.mem
                 }
               );
             }
+
+            floatD = gsap.to(dumbbellsRef.current, {
+              y: -8,
+              rotation: 2,
+              duration: 2.8,
+              repeat: -1,
+              yoyo: true,
+              ease: 'sine.inOut',
+              paused: true,
+            });
+
+            floatS = gsap.to(shakerRef.current, {
+              y: -8,
+              rotation: -2,
+              duration: 3.1,
+              repeat: -1,
+              yoyo: true,
+              ease: 'sine.inOut',
+              paused: true,
+            });
           }, el);
+          sync();
         });
       });
+
+      const io = new IntersectionObserver(
+        (entries) => {
+          inView = Boolean(entries[0]?.isIntersecting);
+          sync();
+        },
+        { threshold: 0.05 }
+      );
+      io.observe(el);
+      document.addEventListener('visibilitychange', sync);
 
       return () => {
         cancelled = true;
         cancelTask?.();
+        io.disconnect();
+        document.removeEventListener('visibilitychange', sync);
         ctx?.revert();
       };
     }, [reducedMotion]);
@@ -124,6 +172,17 @@ export const BookingCardsSection: React.FC<BookingCardsSectionProps> = React.mem
                     </Button>
                   </div>
                 </div>
+
+                <img
+                  ref={dumbbellsRef}
+                  src="/images/dumbbells.webp"
+                  width={720}
+                  height={333}
+                  alt="Black hex dumbbells"
+                  loading="lazy"
+                  decoding="async"
+                  className="pointer-events-none hidden sm:block absolute -right-4 -bottom-6 w-52 lg:w-60 h-auto object-contain"
+                />
               </div>
             </TiltCard>
 
@@ -179,6 +238,17 @@ export const BookingCardsSection: React.FC<BookingCardsSectionProps> = React.mem
                     </Button>
                   </div>
                 </div>
+
+                <img
+                  ref={shakerRef}
+                  src="/images/shaker.webp"
+                  width={520}
+                  height={468}
+                  alt="JS FITNESS shaker bottle"
+                  loading="lazy"
+                  decoding="async"
+                  className="pointer-events-none hidden sm:block absolute right-4 -bottom-4 w-32 lg:w-36 h-auto object-contain"
+                />
               </div>
             </TiltCard>
           </div>

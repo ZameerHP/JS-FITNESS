@@ -77,9 +77,9 @@ export const About: React.FC = () => {
             <Reveal immediate direction="right" delayMs={140} className="lg:col-span-6">
               <div className="relative mx-auto max-w-[460px] overflow-hidden rounded-[24px] card-unified-lime card-hover-lift">
                 <img
-                  src="/images/facility-neon-logo.webp"
-                  alt="JS FITNESS INC Calgary NE neon wall crest"
-                  className="w-full h-[460px] sm:h-[480px] object-cover object-center"
+                  src="/images/founder.webp"
+                  alt="Jatinder Singh — Founder of JS FITNESS INC"
+                  className="w-full h-[460px] sm:h-[480px] object-cover object-top"
                 />
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/60 to-transparent p-6">
                   <div className="font-script text-4xl text-[#B6F500]">Stronger Together</div>

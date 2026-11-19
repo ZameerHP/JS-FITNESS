@@ -36,7 +36,7 @@ export default defineConfig({
       resolveDependencies: (_filename, deps) =>
         deps.filter(
           (d) =>
-            !/AdminLayout|CalendlyModal|PerfHud|Contact-|gsap-|motion-|HomeBelowFold-|ShellFooter-|Preloader-|PageTransition-|CustomCursor-|VideoModal-/i.test(
+            !/three-|HeroParticles|AdminLayout|CalendlyModal|PerfHud|Contact-|gsap-|motion-|HomeBelowFold-|ShellFooter-|Preloader-|PageTransition-|CustomCursor-|VideoModal-/i.test(
               d
             )
         ),
@@ -59,6 +59,9 @@ export default defineConfig({
           }
           if (/node_modules[\\/]framer-motion[\\/]/.test(id)) {
             return 'motion';
+          }
+          if (/node_modules[\\/](?:three|@react-three)[\\/]/.test(id)) {
+            return 'three';
           }
         },
       },

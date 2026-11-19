@@ -30,7 +30,7 @@ html = html.replace(
 
 // Strip non-critical modulepreload tags
 html = html.replace(
-  /\s*<link\b[^>]*rel=["']modulepreload["'][^>]*href=["'][^"']*(?:AdminLayout|CalendlyModal|PerfHud|Contact-|gsap-|motion-|HomeBelowFold-|ShellFooter-|Preloader-|PageTransition-|CustomCursor-|VideoModal-)[^"']*["'][^>]*>\s*/gi,
+  /\s*<link\b[^>]*rel=["']modulepreload["'][^>]*href=["'][^"']*(?:three-|HeroParticles|AdminLayout|CalendlyModal|PerfHud|Contact-|gsap-|motion-|HomeBelowFold-|ShellFooter-|Preloader-|PageTransition-|CustomCursor-|VideoModal-)[^"']*["'][^>]*>\s*/gi,
   '\n    '
 );
 
