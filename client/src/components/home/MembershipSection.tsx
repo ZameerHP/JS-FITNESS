@@ -170,8 +170,8 @@ export const MembershipSection: React.FC = React.memo(() => {
       <div className="pointer-events-none absolute inset-0">
         <img
           ref={bgRef}
-          src="/images/gym-interior.webp"
-          srcSet="/images/gym-interior-800.webp 800w, /images/gym-interior-1200.webp 1200w, /images/gym-interior.webp 1920w"
+          src="/images/facility-floor.webp"
+          srcSet="/images/facility-floor-800.webp 800w, /images/facility-floor-1200.webp 1200w, /images/facility-floor.webp 1920w"
           sizes="100vw"
           width={1920}
           height={1080}

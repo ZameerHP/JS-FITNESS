@@ -39,7 +39,7 @@ export const Membership: React.FC = () => {
       <section className="relative overflow-hidden py-20 lg:py-24 border-b border-white/[0.08]">
         <div className="pointer-events-none absolute inset-0">
           <img
-            src="/images/gym-interior.webp"
+            src="/images/facility-floor.webp"
             alt="JS FITNESS INC 24/7 gym floor"
             className="h-full w-full object-cover opacity-35"
           />

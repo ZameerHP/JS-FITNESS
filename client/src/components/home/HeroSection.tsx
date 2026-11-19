@@ -26,8 +26,6 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
 
     const sectionRef = useRef<HTMLElement>(null);
     const bgRef = useRef<HTMLImageElement>(null);
-    const athleteWrapRef = useRef<HTMLDivElement>(null);
-    const athleteImgRef = useRef<HTMLImageElement>(null);
     const triangleRef = useRef<SVGPolygonElement>(null);
     const triangleGlowRef = useRef<SVGPolygonElement>(null);
     const triangleWrapRef = useRef<HTMLDivElement>(null);
@@ -83,20 +81,12 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
       loadGsap().then(({ gsap }) => {
         if (cancelled || !sectionRef.current) return;
 
-        let aX: gsap.QuickToFunc | null = null;
-        let aY: gsap.QuickToFunc | null = null;
         let tX: gsap.QuickToFunc | null = null;
         let tY: gsap.QuickToFunc | null = null;
         let wX: gsap.QuickToFunc | null = null;
         let wY: gsap.QuickToFunc | null = null;
 
         ctx = gsap.context(() => {
-          aX = athleteWrapRef.current
-            ? gsap.quickTo(athleteWrapRef.current, 'x', { duration: 0.55, ease: 'power3.out' })
-            : null;
-          aY = athleteWrapRef.current
-            ? gsap.quickTo(athleteWrapRef.current, 'y', { duration: 0.55, ease: 'power3.out' })
-            : null;
           tX = triangleWrapRef.current
             ? gsap.quickTo(triangleWrapRef.current, 'x', { duration: 0.55, ease: 'power3.out' })
             : null;
@@ -113,8 +103,6 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
 
         unsub = subscribePointerTick((ptr) => {
           if (!ptr.dirty) return;
-          aX?.(ptr.normX * 12);
-          aY?.(ptr.normY * 8);
           tX?.(ptr.normX * 24);
           tY?.(ptr.normY * 16);
           wX?.(ptr.normX * -8);
@@ -191,15 +179,6 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
             );
           }
 
-          if (athleteImgRef.current && !isMobile) {
-            tl.fromTo(
-              athleteImgRef.current,
-              { y: 28, scale: 0.98 },
-              { y: 0, scale: 1, duration: 0.8, ease: 'power3.out' },
-              0.1
-            );
-          }
-
           tl.fromTo(
             sublineRef.current,
             { opacity: 0, y: 12 },
@@ -261,17 +240,6 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
               scrub: true,
             },
           });
-
-          gsap.to(athleteWrapRef.current, {
-            y: 55,
-            ease: 'none',
-            scrollTrigger: {
-              trigger: section,
-              start: 'top top',
-              end: 'bottom top',
-              scrub: true,
-            },
-          });
         }, section);
       });
 
@@ -286,18 +254,18 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
         ref={sectionRef}
         className="relative min-h-[100svh] lg:min-h-[820px] flex items-center overflow-hidden bg-[#050505] pt-[76px] pb-24 isolate"
       >
-        {/* Layer 1: Dark gym background with green haze */}
+        {/* Layer 1: Real JS FITNESS Calgary strength floor with green haze */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <img
             ref={bgRef}
-            src="/images/hero-bg.webp"
-            srcSet="/images/hero-bg-800.webp 800w, /images/hero-bg-1200.webp 1200w, /images/hero-bg.webp 1920w"
+            src="/images/facility-hero.webp"
+            srcSet="/images/facility-hero-800.webp 800w, /images/facility-hero-1200.webp 1200w, /images/facility-hero.webp 1920w"
             sizes="100vw"
             width={1920}
             height={1080}
-            fetchPriority="low"
-            alt="JS FITNESS INC Calgary gym interior"
-            className="h-full w-full object-cover opacity-35"
+            fetchPriority="high"
+            alt="JS FITNESS INC Calgary NE strength floor and JS wall crest"
+            className="h-full w-full object-cover opacity-45"
           />
           <div
             className="absolute inset-0"
@@ -350,34 +318,6 @@ export const HeroSection: React.FC<HeroSectionProps> = React.memo(
               strokeLinejoin="round"
             />
           </svg>
-        </div>
-
-        {/* Layer 5: Athlete cutout on right half with static radial back-glow */}
-        <div
-          ref={athleteWrapRef}
-          className="pointer-events-none absolute right-0 bottom-0 top-[68px] w-full md:w-[58%] lg:w-[54%] z-[4] flex items-end justify-center lg:justify-end pr-0 lg:pr-10"
-        >
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-10 rounded-full"
-            style={{
-              background:
-                'radial-gradient(circle at 55% 45%, rgba(182, 245, 0, 0.14) 0%, transparent 65%)',
-            }}
-          />
-          <img
-            ref={athleteImgRef}
-            src="/images/hero-athlete.webp"
-            srcSet="/images/hero-athlete-480.webp 480w, /images/hero-athlete-700.webp 700w, /images/hero-athlete.webp 1100w"
-            sizes="(max-width: 768px) 220px, 550px"
-            width={1100}
-            height={1466}
-            fetchPriority="high"
-            alt="Muscular athlete representing JS FITNESS INC discipline"
-            className={`relative z-10 h-[78%] sm:h-[90%] lg:h-[96%] w-auto max-w-none object-contain object-bottom opacity-100 ${
-              heroVisible && !reducedMotion ? 'athlete-breathe' : ''
-            }`}
-          />
         </div>
 
         {/* Layer 6: Left and bottom legibility vignettes */}

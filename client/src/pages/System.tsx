@@ -27,7 +27,7 @@ const PillarMockUI: React.FC<{ id: string }> = ({ id }) => {
         <div className="rounded-2xl bg-[#08090A] border border-[#B6F500]/30 p-5 space-y-3">
           <div className="flex items-center justify-between text-xs font-bold text-[#B6F500] uppercase tracking-wider">
             <span>Google Sheets • Macro Tracker</span>
-            <span>On Target 96%</span>
+            <span className="text-white/50 font-normal">Sample View</span>
           </div>
           <div className="grid grid-cols-4 gap-2 text-center text-xs">
             {[
@@ -47,8 +47,9 @@ const PillarMockUI: React.FC<{ id: string }> = ({ id }) => {
     case 'training':
       return (
         <div className="rounded-2xl bg-[#08090A] border border-[#B6F500]/30 p-5 space-y-2.5 text-xs">
-          <div className="font-bold text-[#B6F500] uppercase tracking-wider">
-            Training App • Upper Power Day
+          <div className="flex items-center justify-between text-xs font-bold text-[#B6F500] uppercase tracking-wider">
+            <span>Training App • Sample Session</span>
+            <span className="text-white/50 font-normal">Sample View</span>
           </div>
           {[
             'Incline DB Press — 4 × 8–10 @ 95 lbs',
@@ -86,9 +87,9 @@ const PillarMockUI: React.FC<{ id: string }> = ({ id }) => {
       return (
         <div className="rounded-2xl bg-[#08090A] border border-[#B6F500]/30 p-5 flex items-center justify-between">
           <div>
-            <div className="text-xs font-bold uppercase text-[#B6F500]">12-Week Trend</div>
-            <div className="text-2xl font-display italic font-black text-white mt-1">
-              -14.2 lbs Body Fat • +4.1 lbs Lean Mass
+            <div className="text-xs font-bold uppercase text-[#B6F500]">Sample Body Composition Check-In</div>
+            <div className="text-xl sm:text-2xl font-display italic font-black text-white mt-1">
+              Waist, Weight &amp; Strength Trend Tracking
             </div>
           </div>
           <TrendingUp className="w-8 h-8 text-[#B6F500]" />

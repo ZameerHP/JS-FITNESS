@@ -15,7 +15,6 @@ export const SystemSection: React.FC = React.memo(() => {
   const reducedMotion = useReducedMotion();
   const sectionRef = useRef<HTMLElement>(null);
   const phoneRef = useRef<HTMLDivElement>(null);
-  const athleteRef = useRef<HTMLImageElement>(null);
   const ringCircleRef = useRef<SVGCircleElement>(null);
   const pctRef = useRef<HTMLSpanElement>(null);
   const checklistRef = useRef<HTMLDivElement>(null);
@@ -45,32 +44,17 @@ export const SystemSection: React.FC = React.memo(() => {
     let cancelled = false;
     let floatTween: gsap.core.Tween | null = null;
     let cometTween: gsap.core.Tween | null = null;
-    let jitterInterval: ReturnType<typeof setInterval> | null = null;
     let inView = false;
     let ctx: gsap.Context | null = null;
 
-    const bars = Array.from(el.querySelectorAll<HTMLElement>('.mockup-bar'));
     const syncLoops = () => {
       const shouldRun = inView && !document.hidden;
       if (shouldRun) {
         floatTween?.play();
         cometTween?.play();
-        if (!jitterInterval) {
-          jitterInterval = setInterval(() => {
-            bars.forEach((bar, i) => {
-              const base = BASE_BARS[i] || 50;
-              const nextScale = Math.max(0.28, Math.min(1.06, (base + (Math.random() - 0.5) * 16) / base));
-              bar.style.transform = `scaleY(${nextScale.toFixed(2)})`;
-            });
-          }, 1800);
-        }
       } else {
         floatTween?.pause();
         cometTween?.pause();
-        if (jitterInterval) {
-          clearInterval(jitterInterval);
-          jitterInterval = null;
-        }
       }
     };
 
@@ -113,23 +97,6 @@ export const SystemSection: React.FC = React.memo(() => {
                 cometEl.style.strokeDashoffset = `${cometObj.offset.toFixed(1)}px`;
               },
             });
-          }
-
-          if (athleteRef.current) {
-            gsap.fromTo(
-              athleteRef.current,
-              { y: 36 },
-              {
-                y: -30,
-                ease: 'none',
-                scrollTrigger: {
-                  trigger: el,
-                  start: 'top bottom',
-                  end: 'bottom top',
-                  scrub: true,
-                },
-              }
-            );
           }
 
           if (circle && !hasCountedRef.current) {
@@ -217,7 +184,6 @@ export const SystemSection: React.FC = React.memo(() => {
       cancelTask?.();
       io.disconnect();
       document.removeEventListener('visibilitychange', syncLoops);
-      if (jitterInterval) clearInterval(jitterInterval);
       rxToRef.current = null;
       ryToRef.current = null;
       ctx?.revert();
@@ -320,8 +286,8 @@ export const SystemSection: React.FC = React.memo(() => {
             </div>
           </div>
 
-          {/* Right column: Phone Mockup + Overlapping Female Athlete + Orbit Ring */}
-          <div className="lg:col-span-6 relative flex items-center justify-center lg:justify-start min-h-[460px] sm:min-h-[540px]">
+          {/* Right column: JS Fitness App Preview + Orbit Ring */}
+          <div className="lg:col-span-6 relative flex items-center justify-center min-h-[460px] sm:min-h-[540px]">
             <div
               ref={phoneRef}
               className="relative z-10 w-[250px] sm:w-[270px] h-[500px] sm:h-[530px] rounded-[38px] border-[2px] border-[#B6F500]/45 bg-[#080909] p-5 shadow-[0_25px_70px_rgba(0,0,0,0.9),0_0_32px_rgba(182,245,0,0.14)] flex flex-col justify-between"
@@ -389,20 +355,6 @@ export const SystemSection: React.FC = React.memo(() => {
                 </div>
               </div>
             </div>
-
-            {/* Female athlete cutout without expensive CSS drop-shadow filter */}
-            <img
-              ref={athleteRef}
-              src="/images/system-athlete.webp"
-              srcSet="/images/system-athlete-400.webp 400w, /images/system-athlete-600.webp 600w, /images/system-athlete.webp 900w"
-              sizes="(max-width: 768px) 190px, 420px"
-              width={900}
-              height={1200}
-              alt="Female fitness athlete using JS FITNESS SYSTEM"
-              loading="lazy"
-              decoding="async"
-              className="pointer-events-none relative -ml-14 sm:-ml-16 z-20 h-[370px] sm:h-[460px] w-auto object-contain grayscale contrast-125"
-            />
 
             {/* Glowing lime elliptical orbit ring (dual stroke, no live feGaussianBlur) */}
             <svg

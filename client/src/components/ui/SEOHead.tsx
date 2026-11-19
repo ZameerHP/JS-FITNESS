@@ -78,7 +78,7 @@ export const SEOHead: React.FC<SEOHeadProps> = React.memo(({ title, description,
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={desc} />
       <meta property="og:url" content={canonicalUrl} />
-      <meta property="og:image" content="https://jsfitness.ca/images/hero-bg.webp" />
+      <meta property="og:image" content="https://jsfitness.ca/images/facility-hero.webp" />
 
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={fullTitle} />

@@ -44,7 +44,7 @@ export const Preloader: React.FC<PreloaderProps> = ({ onComplete }) => {
     }
 
     // Decode hero images during preloader so hero entrance has zero decode frame drops
-    ['/images/hero-athlete.webp', '/images/hero-bg.webp'].forEach((src) => {
+    ['/images/facility-hero.webp'].forEach((src) => {
       const img = new Image();
       img.src = src;
       if (typeof img.decode === 'function') {

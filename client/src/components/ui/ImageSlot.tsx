@@ -37,11 +37,8 @@ export const ImageSlot: React.FC<ImageSlotProps> = ({
     );
   }
 
-  const transformMatch = /^\/images\/(transform-(?:male|female)-(?:before|after))\.webp$/.exec(src);
-  const srcSet = transformMatch
-    ? `/images/${transformMatch[1]}-320.webp 320w, ${src} 600w`
-    : undefined;
-  const sizes = transformMatch ? '(max-width: 768px) 145px, 260px' : undefined;
+  const srcSet = undefined;
+  const sizes = undefined;
 
   return (
     <div className={`relative overflow-hidden ${className}`}>
