@@ -5,13 +5,27 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function resolveDatabaseUrl(): string | undefined {
-  const raw = process.env.DATABASE_URL?.trim();
+  let raw = process.env.DATABASE_URL?.trim();
+  if (!raw) return undefined;
+
+  // Strip accidental surrounding quotes if copied from .env into a dashboard field
+  if (
+    (raw.startsWith('"') && raw.endsWith('"')) ||
+    (raw.startsWith("'") && raw.endsWith("'"))
+  ) {
+    raw = raw.slice(1, -1).trim();
+  }
   if (!raw) return undefined;
 
   // Ensure Supabase Transaction Pooler (port 6543) disables prepared statements cleanly for Prisma
-  if (raw.includes(':6543') && !raw.includes('pgbouncer=')) {
-    const separator = raw.includes('?') ? '&' : '?';
-    return `${raw}${separator}pgbouncer=true`;
+  if (raw.includes(':6543')) {
+    const params: string[] = [];
+    if (!raw.includes('pgbouncer=')) params.push('pgbouncer=true');
+    if (!raw.includes('connection_limit=')) params.push('connection_limit=1');
+    if (params.length > 0) {
+      const separator = raw.includes('?') ? '&' : '?';
+      raw = `${raw}${separator}${params.join('&')}`;
+    }
   }
   return raw;
 }

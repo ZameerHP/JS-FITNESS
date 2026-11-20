@@ -79,8 +79,31 @@ app.get(
     };
 
     if (req.query.deep === '1') {
-      await prisma.$queryRaw`SELECT 1`;
-      return res.json({ ...status, dbConnected: true });
+      try {
+        await prisma.$queryRaw`SELECT 1`;
+        const adminCount = await prisma.adminUser.count();
+        return res.json({ ...status, dbConnected: true, adminCount });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        let reason = 'database_error';
+        if (/Environment variable not found:\s*DATABASE_URL/i.test(msg)) {
+          reason = 'missing_database_url';
+        } else if (/Error parsing connection string|invalid domain character|must start with/i.test(msg)) {
+          reason = 'invalid_database_url';
+        } else if (/Can't reach database server|ECONNREFUSED|ETIMEDOUT|ENOTFOUND/i.test(msg)) {
+          reason = 'database_unreachable';
+        } else if (/Authentication failed|password authentication failed/i.test(msg)) {
+          reason = 'database_auth_failed';
+        } else if (/does not exist|P2021/i.test(msg)) {
+          reason = 'schema_missing';
+        }
+        return res.status(503).json({
+          ...status,
+          ok: false,
+          dbConnected: false,
+          reason,
+        });
+      }
     }
 
     return res.json(status);
