@@ -5,7 +5,14 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function resolveDatabaseUrl(): string | undefined {
-  let raw = process.env.DATABASE_URL?.trim();
+  const candidates = [
+    process.env.DATABASE_URL,
+    process.env.POSTGRES_PRISMA_URL,
+    process.env.POSTGRES_URL,
+    process.env.SUPABASE_DB_URL,
+    process.env.POSTGRES_URL_NON_POOLING,
+  ];
+  let raw = candidates.find((v) => v && v.trim().length > 0)?.trim();
   if (!raw) return undefined;
 
   // Strip accidental surrounding quotes if copied from .env into a dashboard field

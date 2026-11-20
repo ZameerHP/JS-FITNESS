@@ -102,6 +102,11 @@ app.get(
           ok: false,
           dbConnected: false,
           reason,
+          envPresence: {
+            DATABASE_URL: Boolean(process.env.DATABASE_URL?.trim()),
+            POSTGRES_PRISMA_URL: Boolean(process.env.POSTGRES_PRISMA_URL?.trim()),
+            POSTGRES_URL: Boolean(process.env.POSTGRES_URL?.trim()),
+          },
         });
       }
     }
